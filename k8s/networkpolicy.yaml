@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: email-auth-gateway
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: email-auth-gateway
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Redis
+    - ports:
+        - protocol: TCP
+          port: 6379
+    # ClamAV
+    - ports:
+        - protocol: TCP
+          port: 3310
+    # SMTP Relay
+    - ports:
+        - protocol: TCP
+          port: 25
+        - protocol: TCP
+          port: 587
+        - protocol: TCP
+          port: 465
+    # Outbound HTTPS APIs (VirusTotal, Safe Browsing, RDAP, Webhooks)
+    - ports:
+        - protocol: TCP
+          port: 443

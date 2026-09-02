@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "email-auth-gateway.fullname" . }}-config
+  labels:
+    {{- include "email-auth-gateway.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  MAX_MESSAGE_SIZE_BYTES: {{ .Values.config.maxMessageSizeBytes | quote }}
+  MAX_URLS_ANALYZED_PER_MESSAGE: {{ .Values.config.maxUrlsAnalyzedPerMessage | quote }}
+  MAX_ATTACHMENTS_ANALYZED_PER_MESSAGE: {{ .Values.config.maxAttachmentsAnalyzedPerMessage | quote }}
+  MAX_ATTACHMENT_SIZE_BYTES: {{ .Values.config.maxAttachmentSizeBytes | quote }}
+  EXTERNAL_CALL_TIMEOUT_SECONDS: {{ .Values.config.externalCallTimeoutSeconds | quote }}
+  RATE_LIMIT_MAX_REQUESTS: {{ .Values.config.rateLimitMaxRequests | quote }}
+  RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimitWindowSeconds | quote }}
+  DOMAIN_AGE_CACHE_TTL_SECONDS: {{ .Values.config.domainAgeCacheTtlSeconds | quote }}
+  REPUTATION_CACHE_TTL_SECONDS: {{ .Values.config.reputationCacheTtlSeconds | quote }}
+  DEDUP_TTL_SECONDS: {{ .Values.config.dedupeTtlSeconds | quote }}
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: {{ .Values.config.circuitBreakerFailureThreshold | quote }}
+  CIRCUIT_BREAKER_RESET_TIMEOUT_SECONDS: {{ .Values.config.circuitBreakerResetTimeoutSeconds | quote }}
+  USE_REDIS: {{ .Values.config.useRedis | quote }}
+  REDIS_URL: {{ .Values.config.redisUrl | quote }}
+  RAW_MAIL_LOG_DIR: {{ .Values.config.rawMailLogDir | quote }}
+  AUDIT_LOG_PATH: {{ .Values.config.auditLogPath | quote }}
+  ADMIN_AUDIT_LOG_PATH: {{ .Values.config.adminAuditLogPath | quote }}
+  QUARANTINE_DIR: {{ .Values.config.quarantineDir | quote }}
+  RELAY_HOST: {{ .Values.config.relayHost | quote }}
+  RELAY_PORT: {{ .Values.config.relayPort | quote }}
+  RELAY_USE_TLS: {{ .Values.config.relayUseTls | quote }}
+  RELAY_START_TLS: {{ .Values.config.relayStartTls | quote }}
+  ENABLE_TAG_ONLY_MODE: {{ .Values.config.enableTagOnlyMode | quote }}
+  CLAMD_HOST: {{ .Values.config.clamdHost | quote }}
+  CLAMD_PORT: {{ .Values.config.clamdPort | quote }}
+  WARN_THRESHOLD: {{ .Values.config.warnThreshold | quote }}
+  QUARANTINE_THRESHOLD: {{ .Values.config.quarantineThreshold | quote }}

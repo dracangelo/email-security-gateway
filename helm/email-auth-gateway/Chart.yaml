@@ -1,0 +1,17 @@
+apiVersion: v2
+name: email-auth-gateway
+description: Production Helm chart for Email Authentication Gateway & Phishing Defense Service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - email-security
+  - spf
+  - dkim
+  - dmarc
+  - anti-phishing
+  - fastapi
+home: https://github.com/example/email-auth-gateway
+maintainers:
+  - name: SecOps & Platform Engineering Team
+    email: secops@example.com

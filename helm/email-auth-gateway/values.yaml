@@ -1,0 +1,182 @@
+# Default values for email-auth-gateway.
+# This is a YAML-formatted file.
+
+replicaCount: 3
+
+image:
+  repository: ghcr.io/example/email-auth-gateway
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "35m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: gateway.email.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: email-auth-gateway-tls
+      hosts:
+        - gateway.email.example.com
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2048Mi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+networkPolicy:
+  enabled: true
+  ingress:
+    from:
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: ingress-nginx
+  egress:
+    allowDns: true
+    allowRedis: true
+    allowClamav: true
+    allowSmtpRelay: true
+    allowHttpsApis: true
+
+# Application Environment Configuration
+config:
+  appEnv: "production"
+  logLevel: "INFO"
+  
+  # Resource & Rate Limits
+  maxMessageSizeBytes: 26214400  # 25 MB
+  maxUrlsAnalyzedPerMessage: 25
+  maxAttachmentsAnalyzedPerMessage: 10
+  maxAttachmentSizeBytes: 41943040 # 40 MB
+  externalCallTimeoutSeconds: 8.0
+  rateLimitMaxRequests: 120
+  rateLimitWindowSeconds: 60
+  
+  # Caching & Resilience
+  domainAgeCacheTtlSeconds: 21600
+  reputationCacheTtlSeconds: 1800
+  dedupeTtlSeconds: 86400
+  circuitBreakerFailureThreshold: 5
+  circuitBreakerResetTimeoutSeconds: 30.0
+  
+  # Storage
+  useRedis: true
+  redisUrl: "redis://gateway-redis:6379/0"
+  rawMailLogDir: "/app/quarantine/raw"
+  auditLogPath: "/app/logs/audit.jsonl"
+  adminAuditLogPath: "/app/logs/admin-audit.jsonl"
+  quarantineDir: "/app/quarantine/store"
+  
+  # Delivery & Relay
+  relayHost: "smtp-relay.internal.example.com"
+  relayPort: 587
+  relayUseTls: false
+  relayStartTls: true
+  enableTagOnlyMode: false
+  
+  # Threat Intel & ClamAV
+  clamdHost: "gateway-clamav"
+  clamdPort: 3310
+  warnThreshold: 30
+  quarantineThreshold: 70
+
+# Secrets Configuration (Can reference an existing secret or create one)
+secrets:
+  create: true
+  existingSecret: ""
+  webhookSharedSecret: "replace-with-cryptographically-secure-token-in-vault"
+  adminSharedSecret: "replace-with-cryptographically-secure-admin-token-in-vault"
+  rawMailEncryptionKey: ""
+  relayUsername: ""
+  relayPassword: ""
+  vtApiKey: ""
+  gsbApiKey: ""
+  quarantineNotifyWebhookUrl: ""
+
+persistence:
+  quarantine:
+    enabled: true
+    storageClass: "gp3"
+    accessMode: ReadWriteOnce
+    size: 50Gi
+    mountPath: /app/quarantine
+  logs:
+    enabled: true
+    storageClass: "gp3"
+    accessMode: ReadWriteOnce
+    size: 20Gi
+    mountPath: /app/logs
+
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - email-auth-gateway
+          topologyKey: kubernetes.io/hostname

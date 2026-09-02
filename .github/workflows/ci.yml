@@ -1,0 +1,163 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint_and_format:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Linting Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+
+      - name: Run Black Code Format Check
+        run: |
+          black --check --diff .
+
+      - name: Run Flake8 Linting
+        run: |
+          # Stop build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all other errors as warnings
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=120 --statistics
+
+  test_suite:
+    name: Test Suite & Coverage
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-cov fakeredis
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Pytest Suite with Coverage
+        env:
+          USE_REDIS: "true"
+          REDIS_URL: "redis://localhost:6379/0"
+          WEBHOOK_SHARED_SECRET: "ci-test-webhook-secret-token"
+          ADMIN_SHARED_SECRET: "ci-test-admin-secret-token"
+        run: |
+          pytest --cov=. --cov-report=xml --cov-report=term-missing tests/
+
+      - name: Upload Test Coverage Artifact
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  security_and_sast:
+    name: Security & SAST Scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Security Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit pip-audit
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Bandit SAST Scan
+        run: |
+          bandit -r auth_checker content_analysis attachment_analysis decision_engine delivery security storage audit config webhook_receiver admin_ui identity observability scalability threat_intel multi_tenancy reliability time_of_click -ll
+
+      - name: Run Pip-Audit Dependency Scanner
+        run: |
+          pip-audit --desc
+
+  docker_build_and_smoke_test:
+    name: Docker Build, Security Scan & Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: email-auth-gateway:ci-test
+
+      - name: Scan Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "email-auth-gateway:ci-test"
+          format: "table"
+          exit-code: "0" # Audit log in CI, gate in CD
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
+      - name: Run Container Smoke Test
+        run: |
+          docker run -d \
+            --name smoke-test-gateway \
+            -p 8000:8000 \
+            -e WEBHOOK_SHARED_SECRET="smoke-test-secret" \
+            -e ADMIN_SHARED_SECRET="smoke-admin-secret" \
+            email-auth-gateway:ci-test
+          
+          # Wait for container startup and verify /healthz
+          sleep 5
+          curl --fail --retry 5 --retry-delay 2 --retry-connrefused http://localhost:8000/healthz || (docker logs smoke-test-gateway && exit 1)
+          
+          echo "Healthcheck successfully verified on container image!"
+          docker stop smoke-test-gateway
+          docker rm smoke-test-gateway

@@ -1,0 +1,66 @@
+# Production environment overrides
+replicaCount: 5
+
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 25
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 75
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 3
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "35m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "150"
+  hosts:
+    - host: gateway.email.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: email-auth-gateway-prod-tls
+      hosts:
+        - gateway.email.example.com
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2048Mi
+  requests:
+    cpu: 1000m
+    memory: 1024Mi
+
+config:
+  appEnv: "production"
+  logLevel: "WARN"
+  useRedis: true
+  redisUrl: "redis://clustercfg.prod-redis.internal:6379/0"
+  relayHost: "email-smtp.us-east-1.amazonaws.com"
+  relayPort: 587
+  relayStartTls: true
+  enableTagOnlyMode: false
+  clamdHost: "clamav.prod-secops.internal"
+
+secrets:
+  # In production, recommend using ExternalSecrets or AWS Secrets Manager IRSA
+  create: false
+  existingSecret: "email-auth-gateway-production-secrets"
+
+persistence:
+  quarantine:
+    enabled: true
+    storageClass: "gp3"
+    size: 200Gi
+  logs:
+    enabled: true
+    storageClass: "gp3"
+    size: 100Gi

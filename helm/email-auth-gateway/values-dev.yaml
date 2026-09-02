@@ -1,0 +1,48 @@
+# Dev environment overrides
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: gateway.local.dev
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+config:
+  appEnv: "development"
+  logLevel: "DEBUG"
+  useRedis: false
+  relayHost: "gateway-mailpit"
+  relayPort: 1025
+  relayStartTls: false
+  enableTagOnlyMode: false
+  clamdHost: ""
+
+secrets:
+  webhookSharedSecret: "dev-webhook-secret-token"
+  adminSharedSecret: "dev-admin-secret-token"
+
+persistence:
+  quarantine:
+    enabled: false
+  logs:
+    enabled: false

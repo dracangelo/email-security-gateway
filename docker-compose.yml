@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: email-auth-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - WEBHOOK_SHARED_SECRET=${WEBHOOK_SHARED_SECRET:-change-this-in-production}
+      - ADMIN_SHARED_SECRET=${ADMIN_SHARED_SECRET:-change-this-in-production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - USE_REDIS=true
+      - REDIS_URL=redis://redis:6379/0
+      - CLAMAV_HOST=clamav
+      - CLAMAV_PORT=3310
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - ENABLE_TAG_ONLY_MODE=${ENABLE_TAG_ONLY_MODE:-false}
+    depends_on:
+      redis:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: gateway-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  clamav:
+    image: clamav/clamav:latest
+    container_name: gateway-clamav
+    ports:
+      - "3310:3310"
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: gateway-mailpit
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP
+    restart: unless-stopped

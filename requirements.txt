@@ -1,0 +1,18 @@
+dnspython>=2.6.0
+dkimpy>=1.1.5
+pycryptodome>=3.20.0      # dkimpy's RSA backend
+httpx>=0.28.0               # RDAP / VirusTotal / Safe Browsing lookups
+fastapi>=0.141.0
+uvicorn[standard]>=0.52.0
+python-multipart>=0.0.32    # required by FastAPI for multipart/form-data (SendGrid Inbound Parse)
+pydantic-settings>=2.7.0    # centralized config (config/__init__.py)
+redis>=5.2.0                 # RedisStore -- multi-instance rate limiting/caching/dedup
+cryptography>=43.0.0        # Fernet at-rest encryption for stored raw mail
+clamd>=1.0.2                 # ClamAV client for attachment scanning (optional -- no-ops without a clamd host)
+pytest>=8.0.0                 # dev/test only
+fakeredis>=2.26.0             # dev/test only -- RedisStore tests run against this, no real Redis needed
+aiosmtplib>=5.0.0            # async SMTP relay (delivery/relay.py)
+aiosmtpd>=1.4.0               # dev/test only -- local SMTP server used to test relay.py against real behavior
+publicsuffix2>=2.20191221
+confusable_homoglyphs>=3.3.1
+
