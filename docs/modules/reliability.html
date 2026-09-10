@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>High Availability, Disaster Recovery & Reliability (`reliability`) — email-auth-gateway</title>
+  <meta name="description" content="Technical documentation for High Availability, Disaster Recovery & Reliability (`reliability`) in email-auth-gateway" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-base: #0d1117;
+      --bg-surface: #161b22;
+      --bg-elevated: #1c2128;
+      --bg-hover: #21262d;
+      --border: #30363d;
+      --border-muted: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-blue-dim: #1f6feb;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #a371f7;
+      --sidebar-width: 290px;
+      --header-height: 62px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* HEADER */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-height);
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .header-logo .shield {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #1f6feb 0%, #a371f7 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(88,166,255,0.35);
+    }
+
+    .header-badge {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .portal-link {
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .portal-link:hover {
+      background: rgba(88, 166, 255, 0.2);
+      border-color: var(--accent-blue);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0;
+      z-index: 50;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 12px 20px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 20px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      border-left: 3px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+    .nav-item.active {
+      color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.08);
+      border-left-color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    /* MAIN CONTAINER */
+    .main-container {
+      margin-left: var(--sidebar-width);
+      margin-top: var(--header-height);
+      display: flex;
+      justify-content: center;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      width: 100%;
+      padding: 40px 48px 80px;
+    }
+
+    /* BREADCRUMBS */
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .breadcrumbs a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .breadcrumbs a:hover {
+      color: var(--accent-blue);
+    }
+    .breadcrumbs .separator {
+      color: var(--text-muted);
+    }
+    .breadcrumbs .current {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* TYPOGRAPHY */
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 36px 0 16px;
+      color: var(--text-primary);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: var(--text-primary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    ul, ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* CODE & PRE */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: #79c0ff;
+    }
+    pre {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 16px 0 24px;
+    }
+    pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0 28px;
+      font-size: 13.5px;
+    }
+    th {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      color: var(--text-secondary);
+    }
+    tr:nth-child(even) {
+      background: rgba(22, 27, 34, 0.4);
+    }
+
+    /* ALERTS / CALLOUTS */
+    .callout {
+      border-left: 4px solid var(--border);
+      background: var(--bg-surface);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+    }
+    .callout-title {
+      font-weight: 600;
+      font-size: 13.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .callout-note { border-color: var(--accent-blue); }
+    .callout-note .callout-title { color: var(--accent-blue); }
+    .callout-warning { border-color: var(--accent-orange); }
+    .callout-warning .callout-title { color: var(--accent-orange); }
+    .callout-important { border-color: var(--accent-purple); }
+    .callout-important .callout-title { color: var(--accent-purple); }
+    .callout-tip { border-color: var(--accent-green); }
+    .callout-tip .callout-title { color: var(--accent-green); }
+    .callout-caution { border-color: var(--accent-red); }
+    .callout-caution .callout-title { color: var(--accent-red); }
+
+    /* MERMAID DIAGRAMS */
+    .mermaid {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* FOOTER NAV */
+    .doc-footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main-container { margin-left: 0; }
+      .content-wrapper { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="../index.html" class="header-logo">
+    <div class="shield">🛡️</div>
+    <span>email-auth-gateway</span>
+  </a>
+  <span class="header-badge">v1.0 Docs</span>
+  <div class="header-nav">
+    <a href="../index.html" class="portal-link">✨ Interactive SPA Portal</a>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="nav-group-title">Getting Started & Core</div>
+<a href="../index.html" class="nav-item">Portal Dashboard</a>
+<a href="../getting_started.html" class="nav-item">Getting Started</a>
+<a href="../architecture.html" class="nav-item">Architecture Overview</a>
+<a href="../configuration.html" class="nav-item">Configuration Guide</a>
+<a href="../api_reference.html" class="nav-item">API Reference</a>
+<a href="../environment_parity.html" class="nav-item">Environment Parity</a>
+<div class="nav-group-title">Gateway Modules (1/2)</div>
+<a href="../modules/auth_checker.html" class="nav-item">Authentication Checker</a>
+<a href="../modules/content_analysis.html" class="nav-item">Content Analysis</a>
+<a href="../modules/attachment_analysis.html" class="nav-item">Attachment Analysis</a>
+<a href="../modules/decision_engine.html" class="nav-item">Decision Engine</a>
+<a href="../modules/delivery.html" class="nav-item">Delivery & Quarantine</a>
+<a href="../modules/security.html" class="nav-item">Security & Webhook Auth</a>
+<a href="../modules/resilience.html" class="nav-item">Resilience & Backoff</a>
+<a href="../modules/storage.html" class="nav-item">KV & Redis Storage</a>
+<a href="../modules/audit.html" class="nav-item">Audit Logging</a>
+<a href="../modules/multi_tenancy.html" class="nav-item">Multi-Tenancy</a>
+<div class="nav-group-title">Gateway Modules (2/2)</div>
+<a href="../modules/observability.html" class="nav-item">Observability & Metrics</a>
+<a href="../modules/compliance.html" class="nav-item">Compliance & Retention</a>
+<a href="../modules/webhook_receiver.html" class="nav-item">Webhook Receiver</a>
+<a href="../modules/threat_intel.html" class="nav-item">Threat Intelligence</a>
+<a href="../modules/time_of_click.html" class="nav-item">Time-of-Click Protection</a>
+<a href="../modules/identity.html" class="nav-item">Identity & RBAC</a>
+<a href="../modules/admin_ui.html" class="nav-item">SOC Admin UI</a>
+<a href="../modules/scalability.html" class="nav-item">Scalability & Async MQ</a>
+<a href="../modules/reliability.html" class="nav-item active">Reliability & DR</a>
+<a href="../modules/security_hardening.html" class="nav-item">Security Hardening</a>
+<div class="nav-group-title">Deployment & Infrastructure</div>
+<a href="../deployment/docker.html" class="nav-item">Docker & Compose</a>
+<a href="../deployment/kubernetes.html" class="nav-item">Kubernetes Manifests</a>
+<a href="../deployment/helm.html" class="nav-item">Helm Chart</a>
+<a href="../deployment/terraform.html" class="nav-item">Terraform & AWS</a>
+<div class="nav-group-title">Security & Governance</div>
+<a href="../security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
+<a href="../security/hardening.html" class="nav-item">Production Hardening</a>
+<div class="nav-group-title">Operations & Runbooks</div>
+<a href="../runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
+<a href="../runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
+<a href="../runbooks/key_rotation.html" class="nav-item">Key & Secret Rotation</a>
+<a href="../runbooks/quarantine_disk_full.html" class="nav-item">Quarantine Disk Full</a>
+<a href="../runbooks/redis_down.html" class="nav-item">Redis Outage Recovery</a>
+<a href="../runbooks/relay_down.html" class="nav-item">Relay SMTP Outage</a>
+</aside>
+
+<div class="main-container">
+  <div class="content-wrapper">
+    <div class="breadcrumbs">
+      <a href="../index.html">Docs</a>
+      <span class="separator">/</span>
+      <span class="current">Gateway Modules (2/2)</span>
+      <span class="separator">/</span>
+      <span class="current">High Availability, Disaster Recovery & Reliability (`reliability`)</span>
+    </div>
+
+    <h1 id="high-availability-disaster-recovery-reliability-reliability">High Availability, Disaster Recovery &amp; Reliability (<code>reliability</code>)</h1>
+<h2 id="overview">Overview</h2>
+<p>The <code>reliability</code> subsystem ensures that the email security gateway remains operational, resilient to regional outages, and capable of zero-downtime secret rotations.</p>
+<p>It includes automated backup/restore verification, chaos engineering fault injection, active-active multi-region topology health tracking, zero-downtime key rotation windows, and the formal <strong>"What Still Works When X Is Down"</strong> Graceful Degradation Matrix.</p>
+<pre class="mermaid">flowchart TD
+    subgraph ResilienceEng [reliability Subsystem]
+        TOPO[MultiRegionTopology&lt;br/&gt;Active-Active Health Heartbeats]
+        DEG[DegradationMatrix&lt;br/&gt;Graceful Degradation Evaluator]
+        POL[InboundFailureInspector&lt;br/&gt;Provider Outage Policies]
+        ROT[ZeroDowntimeKeyRotator&lt;br/&gt;Dual-Active Grace Windows]
+        CHAOS[ChaosInjector&lt;br/&gt;Network Latency &amp; Fault Simulation]
+        BAK[BackupManager &amp; RestoreManager&lt;br/&gt;Encrypted Daily Snapshots]
+    end
+
+    subgraph ExternalDep [External Services]
+        VT[VirusTotal API]
+        RDAP[RDAP Domain Servers]
+        CLAM[ClamAV Daemon]
+        REDIS[Redis Cluster]
+    end
+
+    ExternalDep -.-&gt;|Failure Detected| DEG
+    DEG --&gt;|Fall Back to Local Heuristics| TOPO
+    ROT --&gt;|Seamless Secret Transition| POL
+    CHAOS -.-&gt;|Verify Resilience SLAs| DEG
+</pre>
+<hr />
+<h2 id="core-components">Core Components</h2>
+<h3 id="1-graceful-degradation-matrix-degradation_matrixpy">1. Graceful Degradation Matrix (<code>degradation_matrix.py</code>)</h3>
+<p>A security gateway must never drop legitimate email or allow uninspected threats to pass silently when external dependencies fail. The <code>DegradationMatrix</code> classifies capabilities and verifies fallback safety:</p>
+<pre><code class="language-python">from reliability.degradation_matrix import DegradationMatrix
+
+matrix = DegradationMatrix()
+
+# Evaluate system state when ClamAV and VirusTotal are offline
+report = matrix.evaluate_degraded_pipeline(down_services=[&quot;clamav&quot;, &quot;virustotal&quot;])
+
+print(report.degradation_level)  # &quot;DEGRADED&quot;
+print(report.safe_to_operate)     # True
+print(report.fallback_actions)
+# [
+#   &quot;Fallback to heuristic &amp; local rule checks for virustotal&quot;,
+#   &quot;Fallback to heuristic &amp; local rule checks for clamav&quot;
+# ]
+</code></pre>
+<h4 id="capability-guarantees-under-dependency-failure">Capability Guarantees Under Dependency Failure</h4>
+<table>
+<thead>
+<tr>
+<th>Failed Component</th>
+<th>Failure Mode</th>
+<th>Gateway Behavior</th>
+<th>Degradation State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VirusTotal API</strong></td>
+<td>Circuit Breaker Opens</td>
+<td>Skips cloud hash/URL lookup; relies on local heuristics and feed cache</td>
+<td>Safe / Degraded</td>
+</tr>
+<tr>
+<td><strong>ClamAV Daemon</strong></td>
+<td>Socket Timeout / Fail Open</td>
+<td>Scans extension &amp; MIME headers; applies attachment risk heuristics</td>
+<td>Safe / Degraded</td>
+</tr>
+<tr>
+<td><strong>RDAP / Whois</strong></td>
+<td>Connection Refused</td>
+<td>Treats domain age as unknown (0 bonus points); logs warning</td>
+<td>Safe / Degraded</td>
+</tr>
+<tr>
+<td><strong>Redis</strong></td>
+<td>Redis Down</td>
+<td>Falls back immediately to thread-safe in-memory cache &amp; rate limiter</td>
+<td>Safe / Degraded</td>
+</tr>
+<tr>
+<td><strong>Relay SMTP</strong></td>
+<td>Connection Down</td>
+<td>Retains message in encrypted queue; triggers automatic backoff retry</td>
+<td>Resilient Hold</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="2-inbound-provider-failure-outage-inspector-inbound_failure_policypy">2. Inbound Provider Failure &amp; Outage Inspector (<code>inbound_failure_policy.py</code>)</h3>
+<p>Different inbound email providers behave differently when a gateway suffers a network outage or returns HTTP 5xx errors. The <code>InboundFailureInspector</code> formalizes these SLAs and calculates outage risk:</p>
+<pre><code class="language-python">from reliability.inbound_failure_policy import InboundFailureInspector
+
+inspector = InboundFailureInspector()
+
+# Check impact of a 4-hour maintenance outage on SendGrid inbound webhooks
+report = inspector.calculate_outage_impact(provider_name=&quot;sendgrid&quot;, outage_hours=4.0)
+
+assert report.mail_lost is False
+assert report.retries_expected is True
+# SendGrid queues inbound webhooks and retries delivery for up to 72 hours
+</code></pre>
+<h4 id="inbound-provider-retention-slas">Inbound Provider Retention SLAs</h4>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Max Retry Retention</th>
+<th>Backoff Strategy</th>
+<th>Bounces on Failure?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SendGrid Inbound Parse</strong></td>
+<td>72 Hours</td>
+<td>Exponential backoff</td>
+<td>No (Retries until expired)</td>
+</tr>
+<tr>
+<td><strong>AWS SES / SNS</strong></td>
+<td>84 Hours</td>
+<td>Automatic backoff + DLQ</td>
+<td>No (Retains in SNS topic)</td>
+</tr>
+<tr>
+<td><strong>Mailgun Routes</strong></td>
+<td>80 Hours</td>
+<td>Periodic webhook retry</td>
+<td>No (Drops after 80h)</td>
+</tr>
+<tr>
+<td><strong>Microsoft 365</strong></td>
+<td>24 Hours</td>
+<td>Mail-flow queue backoff</td>
+<td>Generates NDR after 24h</td>
+</tr>
+<tr>
+<td><strong>Standard Postfix MTA</strong></td>
+<td>120 Hours (5 Days)</td>
+<td>Deferred queue retry</td>
+<td>Generates DSN after 5d</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="3-zero-downtime-secret-key-rotation-key_rotationpy">3. Zero-Downtime Secret &amp; Key Rotation (<code>key_rotation.py</code>)</h3>
+<p>Rotating cryptographic keys, webhook secrets, or API tokens must never cause in-flight requests to fail.</p>
+<p><code>ZeroDowntimeKeyRotator</code> maintains an overlapping grace window where both the newly rotated key and the outgoing key remain valid:</p>
+<pre><code class="language-python">from reliability.key_rotation import ZeroDowntimeKeyRotator
+
+rotator = ZeroDowntimeKeyRotator()
+rotator.set_primary_secret(&quot;webhook_secret&quot;, &quot;old-secret-version-1&quot;)
+
+# Rotate to new secret with 1-hour grace window
+rotator.rotate_secret(&quot;webhook_secret&quot;, &quot;new-secret-version-2&quot;, grace_period_seconds=3600.0)
+
+# Both secrets are valid during the grace window!
+assert rotator.is_valid_secret(&quot;webhook_secret&quot;, &quot;new-secret-version-2&quot;) is True
+assert rotator.is_valid_secret(&quot;webhook_secret&quot;, &quot;old-secret-version-1&quot;) is True
+</code></pre>
+<hr />
+<h3 id="4-backup-disaster-recovery-backuppy-restorepy">4. Backup &amp; Disaster Recovery (<code>backup.py</code> &amp; <code>restore.py</code>)</h3>
+<ul>
+<li><code>BackupManager</code>: Creates AES-256 encrypted snapshots of quarantine storage, SQLite/PostgreSQL databases, and tenant configuration.</li>
+<li><code>RestoreManager</code>: Performs automated test restorations into isolated sandbox environments, validating cryptographic hash integrity and schema consistency before certifying a backup.</li>
+</ul>
+<hr />
+<h3 id="5-multi-region-active-active-topology-topologypy">5. Multi-Region Active-Active Topology (<code>topology.py</code>)</h3>
+<p><code>MultiRegionTopology</code> aggregates health heartbeats from gateway clusters deployed across multiple cloud regions (e.g. <code>us-east-1</code>, <code>eu-west-1</code>, <code>ap-southeast-1</code>), dynamically adjusting DNS routing and traffic splits if a region experiences latency degradation.</p>
+<hr />
+<h3 id="6-chaos-engineering-injector-chaos_injectorpy">6. Chaos Engineering Injector (<code>chaos_injector.py</code>)</h3>
+<p>Validates system resilience in staging environments by programmatically injecting simulated network latency, packet loss, DNS lookup timeouts, and database disconnects.</p>
+<hr />
+<h2 id="testing">Testing</h2>
+<pre><code class="language-bash">pytest tests/test_reliability.py -v
+</code></pre>
+
+    <div class="doc-footer">
+      <span>email-auth-gateway enterprise documentation suite</span>
+      <a href="../index.html">Back to Full Portal ↗</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize Mermaid
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#161b22',
+      primaryColor: '#1f6feb',
+      primaryTextColor: '#e6edf3',
+      lineColor: '#58a6ff'
+    }
+  });
+
+  // Copy Code Buttons
+  document.querySelectorAll('pre').forEach(pre => {
+    if (pre.classList.contains('mermaid')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.onclick = () => {
+      const code = pre.querySelector('code');
+      navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    };
+    pre.appendChild(btn);
+  });
+</script>
+
+</body>
+</html>

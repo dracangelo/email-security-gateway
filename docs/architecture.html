@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture — email-auth-gateway — email-auth-gateway</title>
+  <meta name="description" content="Technical documentation for Architecture — email-auth-gateway in email-auth-gateway" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-base: #0d1117;
+      --bg-surface: #161b22;
+      --bg-elevated: #1c2128;
+      --bg-hover: #21262d;
+      --border: #30363d;
+      --border-muted: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-blue-dim: #1f6feb;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #a371f7;
+      --sidebar-width: 290px;
+      --header-height: 62px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* HEADER */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-height);
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .header-logo .shield {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #1f6feb 0%, #a371f7 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(88,166,255,0.35);
+    }
+
+    .header-badge {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .portal-link {
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .portal-link:hover {
+      background: rgba(88, 166, 255, 0.2);
+      border-color: var(--accent-blue);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0;
+      z-index: 50;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 12px 20px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 20px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      border-left: 3px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+    .nav-item.active {
+      color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.08);
+      border-left-color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    /* MAIN CONTAINER */
+    .main-container {
+      margin-left: var(--sidebar-width);
+      margin-top: var(--header-height);
+      display: flex;
+      justify-content: center;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      width: 100%;
+      padding: 40px 48px 80px;
+    }
+
+    /* BREADCRUMBS */
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .breadcrumbs a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .breadcrumbs a:hover {
+      color: var(--accent-blue);
+    }
+    .breadcrumbs .separator {
+      color: var(--text-muted);
+    }
+    .breadcrumbs .current {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* TYPOGRAPHY */
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 36px 0 16px;
+      color: var(--text-primary);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: var(--text-primary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    ul, ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* CODE & PRE */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: #79c0ff;
+    }
+    pre {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 16px 0 24px;
+    }
+    pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0 28px;
+      font-size: 13.5px;
+    }
+    th {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      color: var(--text-secondary);
+    }
+    tr:nth-child(even) {
+      background: rgba(22, 27, 34, 0.4);
+    }
+
+    /* ALERTS / CALLOUTS */
+    .callout {
+      border-left: 4px solid var(--border);
+      background: var(--bg-surface);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+    }
+    .callout-title {
+      font-weight: 600;
+      font-size: 13.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .callout-note { border-color: var(--accent-blue); }
+    .callout-note .callout-title { color: var(--accent-blue); }
+    .callout-warning { border-color: var(--accent-orange); }
+    .callout-warning .callout-title { color: var(--accent-orange); }
+    .callout-important { border-color: var(--accent-purple); }
+    .callout-important .callout-title { color: var(--accent-purple); }
+    .callout-tip { border-color: var(--accent-green); }
+    .callout-tip .callout-title { color: var(--accent-green); }
+    .callout-caution { border-color: var(--accent-red); }
+    .callout-caution .callout-title { color: var(--accent-red); }
+
+    /* MERMAID DIAGRAMS */
+    .mermaid {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* FOOTER NAV */
+    .doc-footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main-container { margin-left: 0; }
+      .content-wrapper { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="./index.html" class="header-logo">
+    <div class="shield">🛡️</div>
+    <span>email-auth-gateway</span>
+  </a>
+  <span class="header-badge">v1.0 Docs</span>
+  <div class="header-nav">
+    <a href="./index.html" class="portal-link">✨ Interactive SPA Portal</a>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="nav-group-title">Getting Started & Core</div>
+<a href="./index.html" class="nav-item">Portal Dashboard</a>
+<a href="./getting_started.html" class="nav-item">Getting Started</a>
+<a href="./architecture.html" class="nav-item active">Architecture Overview</a>
+<a href="./configuration.html" class="nav-item">Configuration Guide</a>
+<a href="./api_reference.html" class="nav-item">API Reference</a>
+<a href="./environment_parity.html" class="nav-item">Environment Parity</a>
+<div class="nav-group-title">Gateway Modules (1/2)</div>
+<a href="./modules/auth_checker.html" class="nav-item">Authentication Checker</a>
+<a href="./modules/content_analysis.html" class="nav-item">Content Analysis</a>
+<a href="./modules/attachment_analysis.html" class="nav-item">Attachment Analysis</a>
+<a href="./modules/decision_engine.html" class="nav-item">Decision Engine</a>
+<a href="./modules/delivery.html" class="nav-item">Delivery & Quarantine</a>
+<a href="./modules/security.html" class="nav-item">Security & Webhook Auth</a>
+<a href="./modules/resilience.html" class="nav-item">Resilience & Backoff</a>
+<a href="./modules/storage.html" class="nav-item">KV & Redis Storage</a>
+<a href="./modules/audit.html" class="nav-item">Audit Logging</a>
+<a href="./modules/multi_tenancy.html" class="nav-item">Multi-Tenancy</a>
+<div class="nav-group-title">Gateway Modules (2/2)</div>
+<a href="./modules/observability.html" class="nav-item">Observability & Metrics</a>
+<a href="./modules/compliance.html" class="nav-item">Compliance & Retention</a>
+<a href="./modules/webhook_receiver.html" class="nav-item">Webhook Receiver</a>
+<a href="./modules/threat_intel.html" class="nav-item">Threat Intelligence</a>
+<a href="./modules/time_of_click.html" class="nav-item">Time-of-Click Protection</a>
+<a href="./modules/identity.html" class="nav-item">Identity & RBAC</a>
+<a href="./modules/admin_ui.html" class="nav-item">SOC Admin UI</a>
+<a href="./modules/scalability.html" class="nav-item">Scalability & Async MQ</a>
+<a href="./modules/reliability.html" class="nav-item">Reliability & DR</a>
+<a href="./modules/security_hardening.html" class="nav-item">Security Hardening</a>
+<div class="nav-group-title">Deployment & Infrastructure</div>
+<a href="./deployment/docker.html" class="nav-item">Docker & Compose</a>
+<a href="./deployment/kubernetes.html" class="nav-item">Kubernetes Manifests</a>
+<a href="./deployment/helm.html" class="nav-item">Helm Chart</a>
+<a href="./deployment/terraform.html" class="nav-item">Terraform & AWS</a>
+<div class="nav-group-title">Security & Governance</div>
+<a href="./security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
+<a href="./security/hardening.html" class="nav-item">Production Hardening</a>
+<div class="nav-group-title">Operations & Runbooks</div>
+<a href="./runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
+<a href="./runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
+<a href="./runbooks/key_rotation.html" class="nav-item">Key & Secret Rotation</a>
+<a href="./runbooks/quarantine_disk_full.html" class="nav-item">Quarantine Disk Full</a>
+<a href="./runbooks/redis_down.html" class="nav-item">Redis Outage Recovery</a>
+<a href="./runbooks/relay_down.html" class="nav-item">Relay SMTP Outage</a>
+</aside>
+
+<div class="main-container">
+  <div class="content-wrapper">
+    <div class="breadcrumbs">
+      <a href="./index.html">Docs</a>
+      <span class="separator">/</span>
+      <span class="current">Getting Started & Core</span>
+      <span class="separator">/</span>
+      <span class="current">Architecture — email-auth-gateway</span>
+    </div>
+
+    <h1 id="architecture-email-auth-gateway">Architecture — email-auth-gateway</h1>
+<h2 id="overview">Overview</h2>
+<p><code>email-auth-gateway</code> is an enterprise-grade, multi-tenant email security gateway. It sits between inbound mail providers (SendGrid, Mailgun, AWS SES, M365, Google Workspace) and your internal infrastructure, inspecting every message across three parallel analysis stages before deciding whether to forward, warn-and-strip, or quarantine it.</p>
+<hr />
+<h2 id="high-level-data-flow">High-Level Data Flow</h2>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│         Public Inbound Providers                    │
+│  SendGrid · Mailgun · AWS SES · M365 · GWorkspace  │
+└───────────────────┬─────────────────────────────────┘
+                    │ HTTPS webhook / SMTP
+                    ▼
+┌─────────────────────────────────────────────────────┐
+│              Security / Ingress Layer               │
+│  Webhook Auth · IP Allowlist · Rate Limit · Size   │
+│  Bounce Detection · Idempotency (Redis dedup)      │
+└───────────────────┬─────────────────────────────────┘
+                    │ Raw MIME bytes
+                    ▼
+        ┌───────────┴───────────┐
+        │                       │
+        ▼                       ▼
+┌───────────────┐   ┌───────────────────────────┐
+│ auth_checker/ │   │   content_analysis/       │
+│ SPF · DKIM   │   │ Keywords · URLs · Typosquat│
+│ DMARC · ARC  │   │ Homoglyphs · Evasion · OCR│
+│ BIMI · FCrDNS│   │ Reputation · Domain Age   │
+└──────┬────────┘   └────────────┬──────────────┘
+       │                         │
+       │            ┌────────────┘
+       │            │
+       ▼            ▼
+┌────────────────────────────────┐
+│     attachment_analysis/       │
+│  Extract · Extensions · Hashes │
+│  VirusTotal · ClamAV · Sandbox │
+└────────────────┬───────────────┘
+                 │  stage scores (score_delta + reasons)
+                 ▼
+┌─────────────────────────────────────────────────────┐
+│              decision_engine/                       │
+│  Score Aggregation · Per-Tenant Config              │
+│  VIP Policy · Campaign Clustering · Allow/Block    │
+│  Feedback Loop · Shadow Mode · Explainability      │
+└───────────────────┬─────────────────────────────────┘
+                    │  Action: FORWARD / WARN_AND_STRIP / QUARANTINE
+                    ▼
+┌─────────────────────────────────────────────────────┐
+│                  delivery/                          │
+│  forward → relay as-is                             │
+│  warn_and_strip → modify + relay                   │
+│  quarantine → encrypt + store + notify             │
+└───────────────────┬─────────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+┌──────────────┐       ┌────────────────┐
+│   audit/     │       │  observability/│
+│ JSONL trail  │       │ Prometheus     │
+│ Admin log    │       │ OpenTelemetry  │
+└──────────────┘       └────────────────┘
+</code></pre>
+<hr />
+<h2 id="module-responsibilities">Module Responsibilities</h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Role</th>
+<th>Key Files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>webhook_receiver/</code></td>
+<td>FastAPI application, request parsing, orchestration</td>
+<td><code>app.py</code>, <code>parsers/</code></td>
+</tr>
+<tr>
+<td><code>security/</code></td>
+<td>Auth, rate limiting, encryption, redaction</td>
+<td><code>webhook_auth.py</code>, <code>rate_limit.py</code>, <code>encryption.py</code>, <code>redact.py</code></td>
+</tr>
+<tr>
+<td><code>auth_checker/</code></td>
+<td>SPF, DKIM, DMARC, ARC, BIMI, FCrDNS, MTA-STS</td>
+<td><code>pipeline.py</code>, <code>spf.py</code>, <code>dkim_check.py</code>, <code>dmarc.py</code></td>
+</tr>
+<tr>
+<td><code>content_analysis/</code></td>
+<td>URL extraction, typosquatting, keyword matching, reputation</td>
+<td><code>pipeline.py</code>, <code>urls.py</code>, <code>keywords.py</code>, <code>reputation.py</code></td>
+</tr>
+<tr>
+<td><code>attachment_analysis/</code></td>
+<td>MIME extraction, file scanning, VirusTotal, ClamAV</td>
+<td><code>pipeline.py</code>, <code>extract.py</code>, <code>reputation.py</code></td>
+</tr>
+<tr>
+<td><code>decision_engine/</code></td>
+<td>Score aggregation, routing decision, policy layers</td>
+<td><code>scorer.py</code>, <code>allow_block.py</code>, <code>vip_policy.py</code></td>
+</tr>
+<tr>
+<td><code>delivery/</code></td>
+<td>SMTP relay, message modification, quarantine, notifications</td>
+<td><code>pipeline.py</code>, <code>relay.py</code>, <code>modify.py</code>, <code>quarantine.py</code></td>
+</tr>
+<tr>
+<td><code>audit/</code></td>
+<td>Append-only JSONL audit trail</td>
+<td><code>logger.py</code></td>
+</tr>
+<tr>
+<td><code>storage/</code></td>
+<td>KV abstraction (in-memory or Redis)</td>
+<td><code>__init__.py</code></td>
+</tr>
+<tr>
+<td><code>resilience/</code></td>
+<td>Retry with backoff, circuit breaker</td>
+<td><code>retry.py</code>, <code>circuit_breaker.py</code></td>
+</tr>
+<tr>
+<td><code>config/</code></td>
+<td>Centralized settings via pydantic-settings</td>
+<td><code>__init__.py</code></td>
+</tr>
+<tr>
+<td><code>multi_tenancy/</code></td>
+<td>Tenant isolation, MSP view, per-tenant rate limiting</td>
+<td><code>isolation.py</code>, <code>tenant_manager.py</code></td>
+</tr>
+<tr>
+<td><code>observability/</code></td>
+<td>Prometheus metrics, OpenTelemetry tracing, SLOs</td>
+<td><code>metrics.py</code>, <code>tracing.py</code>, <code>slo.py</code></td>
+</tr>
+<tr>
+<td><code>compliance/</code></td>
+<td>GDPR, SOC 2, data residency, retention</td>
+<td><code>gdpr.py</code>, <code>retention.py</code>, <code>residency.py</code></td>
+</tr>
+<tr>
+<td><code>threat_intel/</code></td>
+<td>IOC feeds, STIX/TAXII, MISP, NRD watchlists</td>
+<td><code>ioc_feed.py</code>, <code>stix_taxii.py</code>, <code>misp.py</code></td>
+</tr>
+<tr>
+<td><code>identity/</code></td>
+<td>JWT / bearer RBAC for admin APIs</td>
+<td><code>manager.py</code></td>
+</tr>
+<tr>
+<td><code>admin_ui/</code></td>
+<td>HTML dashboard, quarantine review, analytics</td>
+<td><code>ui_app.py</code>, <code>dashboard_analytics.py</code></td>
+</tr>
+<tr>
+<td><code>time_of_click/</code></td>
+<td>URL rewriting with HMAC-signed redirect</td>
+<td><code>service.py</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="trust-zones">Trust Zones</h2>
+<pre><code>Zone 1: Public Internet (UNTRUSTED)
+  - Sender MTAs, webhooks, phishing URLs, attacker-controlled content
+
+Zone 2: Gateway Ingress Boundary (SEMI-TRUSTED, verified at entry)
+  - /webhooks/* (shared secret + IP allowlist + rate limit)
+
+Zone 3: Internal Microservice Network (TRUSTED)
+  - Redis, worker queues, admin APIs (/admin/*)
+  - mTLS enforced between internal nodes (production)
+
+Zone 4: Admin Zone (AUTHENTICATED + AUDITED)
+  - /admin/* behind separate ADMIN_SHARED_SECRET bearer token
+  - All actions recorded in admin audit log with operator identity
+</code></pre>
+<hr />
+<h2 id="scoring-model">Scoring Model</h2>
+<p>Every analysis stage returns a <code>score_delta</code> that accumulates into a total risk score:</p>
+<table>
+<thead>
+<tr>
+<th>Score Range</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 – 29</td>
+<td><code>FORWARD</code></td>
+<td>Relay as-is to destination</td>
+</tr>
+<tr>
+<td>30 – 69</td>
+<td><code>WARN_AND_STRIP</code></td>
+<td>Prefix subject, defang URLs, strip attachments, then relay</td>
+</tr>
+<tr>
+<td>70 – 100+</td>
+<td><code>QUARANTINE</code></td>
+<td>Encrypt, store, notify admin; do not deliver</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Single-signal override</strong>: A VirusTotal/ClamAV malware hit contributes <code>+100</code> — alone enough to quarantine. Allowlist policy bypasses scoring unless a malware signal is present.</p>
+</blockquote>
+<h3 id="score-contributions-by-check">Score contributions by check</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Pass</th>
+<th>Fail</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPF</td>
+<td>0</td>
+<td>+30 (hard fail), +15 (softfail)</td>
+<td>ARC mitigates if valid chain present</td>
+</tr>
+<tr>
+<td>DKIM</td>
+<td>0</td>
+<td>+30 (invalid), +15 (none)</td>
+<td></td>
+</tr>
+<tr>
+<td>DMARC</td>
+<td>0</td>
+<td>+50 (p=reject), +35 (p=quarantine), +10 (p=none)</td>
+<td></td>
+</tr>
+<tr>
+<td>FCrDNS</td>
+<td>0</td>
+<td>+15</td>
+<td></td>
+</tr>
+<tr>
+<td>MTA-STS enforce fail</td>
+<td>0</td>
+<td>+20</td>
+<td></td>
+</tr>
+<tr>
+<td>BEC / urgency keywords</td>
+<td>0</td>
+<td>+5–+30</td>
+<td>Configurable, per-tenant</td>
+</tr>
+<tr>
+<td>Typosquat / homoglyph</td>
+<td>0</td>
+<td>+20–+40</td>
+<td></td>
+</tr>
+<tr>
+<td>Malicious URL (VirusTotal/GSB)</td>
+<td>0</td>
+<td>+100</td>
+<td></td>
+</tr>
+<tr>
+<td>Malware attachment (ClamAV/VT)</td>
+<td>0</td>
+<td>+100</td>
+<td></td>
+</tr>
+<tr>
+<td>VIP display name spoof</td>
+<td>0</td>
+<td>+25–+40</td>
+<td>Configurable VIP list</td>
+</tr>
+<tr>
+<td>IP reputation (Spamhaus/SORBS)</td>
+<td>0</td>
+<td>+15–+30</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="deployment-topology">Deployment Topology</h2>
+<pre><code>                       Internet
+                          │
+                    [CloudFront/WAF]
+                          │
+                    [Kubernetes Ingress]
+                          │
+              ┌───────────┴───────────┐
+              │     email-auth-gateway│  &lt;- HPA 5-25 replicas
+              │       (FastAPI)       │
+              └───┬───────┬───────────┘
+                  │       │
+          ┌───────┘       └────────┐
+          ▼                        ▼
+   [Redis ElastiCache]    [ClamAV Daemon]
+   Multi-AZ, TLS          Dedicated cluster
+          │
+          └──── Backing: rate limiting, dedup, caching
+</code></pre>
+<hr />
+<h2 id="resilience-design">Resilience Design</h2>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Mechanism</th>
+<th>Behavior on Failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis unavailable</td>
+<td><code>InMemoryStore</code> fallback</td>
+<td>Degraded: rate limiting is per-pod</td>
+</tr>
+<tr>
+<td>ClamAV unreachable</td>
+<td>Circuit breaker + fail-open</td>
+<td>Attachment scanned only via VT/heuristics</td>
+</tr>
+<tr>
+<td>VirusTotal timeout</td>
+<td>Retry with backoff + circuit breaker</td>
+<td>Returns <code>unknown</code> verdict; heuristics still apply</td>
+</tr>
+<tr>
+<td>SMTP relay failure</td>
+<td>Retry on connection errors; never retries 5xx</td>
+<td>Escalates to quarantine if <code>warn_and_strip</code> fails</td>
+</tr>
+<tr>
+<td>Duplicate webhook delivery</td>
+<td>SHA-256 idempotency key in Redis</td>
+<td>Silently skipped, response <code>{"duplicate": true}</code></td>
+</tr>
+</tbody>
+</table>
+
+    <div class="doc-footer">
+      <span>email-auth-gateway enterprise documentation suite</span>
+      <a href="./index.html">Back to Full Portal ↗</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize Mermaid
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#161b22',
+      primaryColor: '#1f6feb',
+      primaryTextColor: '#e6edf3',
+      lineColor: '#58a6ff'
+    }
+  });
+
+  // Copy Code Buttons
+  document.querySelectorAll('pre').forEach(pre => {
+    if (pre.classList.contains('mermaid')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.onclick = () => {
+      const code = pre.querySelector('code');
+      navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    };
+    pre.appendChild(btn);
+  });
+</script>
+
+</body>
+</html>

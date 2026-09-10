@@ -30,6 +30,41 @@ Supporting infrastructure used throughout:
 - **`resilience/`** -- retry-with-backoff + circuit breaker, wrapping every external HTTP call (RDAP, VirusTotal, Safe Browsing).
 - **`config/`** -- one settings object (pydantic-settings), instead of `os.environ.get()` scattered across the codebase.
 
+## Documentation & HTML Portals
+
+The project includes an enterprise-grade documentation suite with both an **Interactive Single Page Application (SPA) Portal** and standalone **Markdown (`.md`) & Static HTML (`.html`) Guides** for every subsystem:
+
+- 🛡️ **[Interactive Documentation Portal](docs/index.html)** — Comprehensive single-page docs app with instant search, dark mode theme, interactive diagrams, and live syntax highlighting.
+- ⚡ **[Getting Started Guide](docs/getting_started.html)** ([Markdown](docs/getting_started.md)) — Prerequisites, installation, and first message verification.
+- 🏗️ **[Architecture Deep-Dive](docs/architecture.html)** ([Markdown](docs/architecture.md)) — End-to-end pipeline diagrams, state machine, and data flow.
+- ⚙️ **[Configuration Reference](docs/configuration.html)** ([Markdown](docs/configuration.md)) — Full environment variable reference and sensible defaults.
+- 📡 **[REST API Reference](docs/api_reference.html)** ([Markdown](docs/api_reference.md)) — Webhook ingestion, admin quarantine management, and health endpoints.
+- 🏢 **Gateway Subsystems**:
+  - [Authentication Checker (`auth_checker`)](docs/modules/auth_checker.html) ([MD](docs/modules/auth_checker.md))
+  - [Content Analysis (`content_analysis`)](docs/modules/content_analysis.html) ([MD](docs/modules/content_analysis.md))
+  - [Attachment Scanning (`attachment_analysis`)](docs/modules/attachment_analysis.html) ([MD](docs/modules/attachment_analysis.md))
+  - [Decision Engine (`decision_engine`)](docs/modules/decision_engine.html) ([MD](docs/modules/decision_engine.md))
+  - [Delivery & Relay (`delivery`)](docs/modules/delivery.html) ([MD](docs/modules/delivery.md))
+  - [Security & Webhook Auth (`security`)](docs/modules/security.html) ([MD](docs/modules/security.md))
+  - [Resilience & Circuit Breaking (`resilience`)](docs/modules/resilience.html) ([MD](docs/modules/resilience.md))
+  - [Key-Value & Redis Storage (`storage`)](docs/modules/storage.html) ([MD](docs/modules/storage.md))
+  - [Audit Logging (`audit`)](docs/modules/audit.html) ([MD](docs/modules/audit.md))
+  - [Multi-Tenancy (`multi_tenancy`)](docs/modules/multi_tenancy.html) ([MD](docs/modules/multi_tenancy.md))
+  - [Observability & Metrics (`observability`)](docs/modules/observability.html) ([MD](docs/modules/observability.md))
+  - [Compliance & Retention (`compliance`)](docs/modules/compliance.html) ([MD](docs/modules/compliance.md))
+  - [Threat Intelligence (`threat_intel`)](docs/modules/threat_intel.html) ([MD](docs/modules/threat_intel.md))
+  - [Time-of-Click URL Protection (`time_of_click`)](docs/modules/time_of_click.html) ([MD](docs/modules/time_of_click.md))
+  - [Identity, SSO & RBAC (`identity`)](docs/modules/identity.html) ([MD](docs/modules/identity.md))
+  - [SOC Admin UI (`admin_ui`)](docs/modules/admin_ui.html) ([MD](docs/modules/admin_ui.md))
+  - [Scalability & Message Queue (`scalability`)](docs/modules/scalability.html) ([MD](docs/modules/scalability.md))
+  - [Reliability & DR (`reliability`)](docs/modules/reliability.html) ([MD](docs/modules/reliability.md))
+  - [Security Hardening & Fuzzing (`security_hardening`)](docs/modules/security_hardening.html) ([MD](docs/modules/security_hardening.md))
+- 🚀 **Deployment Guides**: [Docker Compose](docs/deployment/docker.html) · [Kubernetes](docs/deployment/kubernetes.html) · [Helm](docs/deployment/helm.html) · [Terraform](docs/deployment/terraform.html)
+- 🔒 **Security**: [Threat Model & STRIDE](docs/security/threat_model.html) · [Hardening Checklist](docs/security/hardening.html)
+- 🚨 **[Incident Runbooks](docs/runbooks/INDEX.html)**: [ClamAV Unreachable](docs/runbooks/clamav_unreachable.html) · [Key Rotation](docs/runbooks/key_rotation.html) · [Quarantine Disk Full](docs/runbooks/quarantine_disk_full.html) · [Redis Down](docs/runbooks/redis_down.html) · [Relay Down](docs/runbooks/relay_down.html)
+
+*(To regenerate all standalone HTML pages after updating Markdown files, run `python3 scripts/generate_docs_html.py`.)*
+
 ## Packages
 
 ### `auth_checker/` (Step 2A)

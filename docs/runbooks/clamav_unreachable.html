@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Runbook: ClamAV Daemon Unreachable / Malware Scan Timeout — email-auth-gateway</title>
+  <meta name="description" content="Technical documentation for Runbook: ClamAV Daemon Unreachable / Malware Scan Timeout in email-auth-gateway" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-base: #0d1117;
+      --bg-surface: #161b22;
+      --bg-elevated: #1c2128;
+      --bg-hover: #21262d;
+      --border: #30363d;
+      --border-muted: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-blue-dim: #1f6feb;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #a371f7;
+      --sidebar-width: 290px;
+      --header-height: 62px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* HEADER */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-height);
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .header-logo .shield {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #1f6feb 0%, #a371f7 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(88,166,255,0.35);
+    }
+
+    .header-badge {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .portal-link {
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .portal-link:hover {
+      background: rgba(88, 166, 255, 0.2);
+      border-color: var(--accent-blue);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0;
+      z-index: 50;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 12px 20px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 20px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      border-left: 3px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+    .nav-item.active {
+      color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.08);
+      border-left-color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    /* MAIN CONTAINER */
+    .main-container {
+      margin-left: var(--sidebar-width);
+      margin-top: var(--header-height);
+      display: flex;
+      justify-content: center;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      width: 100%;
+      padding: 40px 48px 80px;
+    }
+
+    /* BREADCRUMBS */
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .breadcrumbs a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .breadcrumbs a:hover {
+      color: var(--accent-blue);
+    }
+    .breadcrumbs .separator {
+      color: var(--text-muted);
+    }
+    .breadcrumbs .current {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* TYPOGRAPHY */
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 36px 0 16px;
+      color: var(--text-primary);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: var(--text-primary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    ul, ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* CODE & PRE */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: #79c0ff;
+    }
+    pre {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 16px 0 24px;
+    }
+    pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0 28px;
+      font-size: 13.5px;
+    }
+    th {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      color: var(--text-secondary);
+    }
+    tr:nth-child(even) {
+      background: rgba(22, 27, 34, 0.4);
+    }
+
+    /* ALERTS / CALLOUTS */
+    .callout {
+      border-left: 4px solid var(--border);
+      background: var(--bg-surface);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+    }
+    .callout-title {
+      font-weight: 600;
+      font-size: 13.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .callout-note { border-color: var(--accent-blue); }
+    .callout-note .callout-title { color: var(--accent-blue); }
+    .callout-warning { border-color: var(--accent-orange); }
+    .callout-warning .callout-title { color: var(--accent-orange); }
+    .callout-important { border-color: var(--accent-purple); }
+    .callout-important .callout-title { color: var(--accent-purple); }
+    .callout-tip { border-color: var(--accent-green); }
+    .callout-tip .callout-title { color: var(--accent-green); }
+    .callout-caution { border-color: var(--accent-red); }
+    .callout-caution .callout-title { color: var(--accent-red); }
+
+    /* MERMAID DIAGRAMS */
+    .mermaid {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* FOOTER NAV */
+    .doc-footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main-container { margin-left: 0; }
+      .content-wrapper { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="../index.html" class="header-logo">
+    <div class="shield">🛡️</div>
+    <span>email-auth-gateway</span>
+  </a>
+  <span class="header-badge">v1.0 Docs</span>
+  <div class="header-nav">
+    <a href="../index.html" class="portal-link">✨ Interactive SPA Portal</a>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="nav-group-title">Getting Started & Core</div>
+<a href="../index.html" class="nav-item">Portal Dashboard</a>
+<a href="../getting_started.html" class="nav-item">Getting Started</a>
+<a href="../architecture.html" class="nav-item">Architecture Overview</a>
+<a href="../configuration.html" class="nav-item">Configuration Guide</a>
+<a href="../api_reference.html" class="nav-item">API Reference</a>
+<a href="../environment_parity.html" class="nav-item">Environment Parity</a>
+<div class="nav-group-title">Gateway Modules (1/2)</div>
+<a href="../modules/auth_checker.html" class="nav-item">Authentication Checker</a>
+<a href="../modules/content_analysis.html" class="nav-item">Content Analysis</a>
+<a href="../modules/attachment_analysis.html" class="nav-item">Attachment Analysis</a>
+<a href="../modules/decision_engine.html" class="nav-item">Decision Engine</a>
+<a href="../modules/delivery.html" class="nav-item">Delivery & Quarantine</a>
+<a href="../modules/security.html" class="nav-item">Security & Webhook Auth</a>
+<a href="../modules/resilience.html" class="nav-item">Resilience & Backoff</a>
+<a href="../modules/storage.html" class="nav-item">KV & Redis Storage</a>
+<a href="../modules/audit.html" class="nav-item">Audit Logging</a>
+<a href="../modules/multi_tenancy.html" class="nav-item">Multi-Tenancy</a>
+<div class="nav-group-title">Gateway Modules (2/2)</div>
+<a href="../modules/observability.html" class="nav-item">Observability & Metrics</a>
+<a href="../modules/compliance.html" class="nav-item">Compliance & Retention</a>
+<a href="../modules/webhook_receiver.html" class="nav-item">Webhook Receiver</a>
+<a href="../modules/threat_intel.html" class="nav-item">Threat Intelligence</a>
+<a href="../modules/time_of_click.html" class="nav-item">Time-of-Click Protection</a>
+<a href="../modules/identity.html" class="nav-item">Identity & RBAC</a>
+<a href="../modules/admin_ui.html" class="nav-item">SOC Admin UI</a>
+<a href="../modules/scalability.html" class="nav-item">Scalability & Async MQ</a>
+<a href="../modules/reliability.html" class="nav-item">Reliability & DR</a>
+<a href="../modules/security_hardening.html" class="nav-item">Security Hardening</a>
+<div class="nav-group-title">Deployment & Infrastructure</div>
+<a href="../deployment/docker.html" class="nav-item">Docker & Compose</a>
+<a href="../deployment/kubernetes.html" class="nav-item">Kubernetes Manifests</a>
+<a href="../deployment/helm.html" class="nav-item">Helm Chart</a>
+<a href="../deployment/terraform.html" class="nav-item">Terraform & AWS</a>
+<div class="nav-group-title">Security & Governance</div>
+<a href="../security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
+<a href="../security/hardening.html" class="nav-item">Production Hardening</a>
+<div class="nav-group-title">Operations & Runbooks</div>
+<a href="../runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
+<a href="../runbooks/clamav_unreachable.html" class="nav-item active">ClamAV Unreachable</a>
+<a href="../runbooks/key_rotation.html" class="nav-item">Key & Secret Rotation</a>
+<a href="../runbooks/quarantine_disk_full.html" class="nav-item">Quarantine Disk Full</a>
+<a href="../runbooks/redis_down.html" class="nav-item">Redis Outage Recovery</a>
+<a href="../runbooks/relay_down.html" class="nav-item">Relay SMTP Outage</a>
+</aside>
+
+<div class="main-container">
+  <div class="content-wrapper">
+    <div class="breadcrumbs">
+      <a href="../index.html">Docs</a>
+      <span class="separator">/</span>
+      <span class="current">Operations & Runbooks</span>
+      <span class="separator">/</span>
+      <span class="current">Runbook: ClamAV Daemon Unreachable / Malware Scan Timeout</span>
+    </div>
+
+    <h1 id="runbook-clamav-daemon-unreachable-malware-scan-timeout">Runbook: ClamAV Daemon Unreachable / Malware Scan Timeout</h1>
+<p><strong>Severity</strong>: SEV-2 (High) — Malware attachment inspection degraded.<br />
+<strong>Trigger</strong>: Alert <code>ClamAVConnectionRefused</code>, <code>ClamAVScanTimeout</code>, or <code>AntivirusCircuitBreakerOpen</code>.</p>
+<hr />
+<h2 id="1-symptoms-initial-impact">1. Symptoms &amp; Initial Impact</h2>
+<ul>
+<li>Gateway logs: <code>[WARNING] ClamAV clamd daemon unreachable at ${CLAMD_HOST}:${CLAMD_PORT}. Circuit breaker opened.</code></li>
+<li>Inbound messages with attachments skip local antimalware scanning and rely solely on static heuristic checks (macro detection, dangerous double-extensions, zero-width characters) and third-party threat intel (VirusTotal hash lookups).</li>
+<li>Mail delivery is NOT blocked (fail-open for operational availability), but security protection is operating in a degraded tier.</li>
+</ul>
+<hr />
+<h2 id="2-immediate-diagnostic-steps">2. Immediate Diagnostic Steps</h2>
+<h3 id="step-1-check-clamav-daemon-status">Step 1: Check ClamAV Daemon Status</h3>
+<pre><code class="language-bash"># Check if ClamAV pod / daemon is running
+kubectl get pods -n email-security-prod -l app.kubernetes.io/name=clamav
+
+# View ClamAV daemon logs
+kubectl logs -n email-security-prod -l app.kubernetes.io/name=clamav --tail=100
+</code></pre>
+<h3 id="step-2-test-clamav-tcp-ping-command">Step 2: Test ClamAV TCP PING Command</h3>
+<pre><code class="language-bash">kubectl exec -it -n email-security-prod deployment/email-auth-gateway -- \
+  python3 -c &quot;
+import socket
+s = socket.socket()
+s.settimeout(3.0)
+try:
+    s.connect(('$CLAMD_HOST', int('$CLAMD_PORT')))
+    s.sendall(b'zPING\0')
+    resp = s.recv(1024)
+    print('ClamAV Ping Response:', resp)
+except Exception as e:
+    print('ClamAV Ping FAILED:', e)
+&quot;
+</code></pre>
+<hr />
+<h2 id="3-resolution-procedures">3. Resolution Procedures</h2>
+<h3 id="scenario-a-clamav-oomkilled-out-of-memory">Scenario A: ClamAV OOMKilled (Out of Memory)</h3>
+<p>ClamAV signature databases (main.cvd, daily.cvd) typically require at least 1.5–2.5 GB of RAM. If memory limit is exceeded, Linux kernel will OOM-kill the daemon.
+1. Check pod termination reasons:
+   <code>bash
+   kubectl describe pod -n email-security-prod -l app.kubernetes.io/name=clamav | grep -i "OOMKilled"</code>
+2. Increase ClamAV memory request &amp; limit to <code>4Gi</code>:
+   <code>bash
+   kubectl set resources deployment/clamav -n email-security-prod --limits=memory=4Gi --requests=memory=2Gi</code></p>
+<h3 id="scenario-b-database-corrupted-or-stale-signatures">Scenario B: Database Corrupted or Stale Signatures</h3>
+<p>If ClamAV crashes during database reload:
+1. Trigger freshclam manual signature update:
+   <code>bash
+   kubectl exec -it -n email-security-prod deployment/clamav -- freshclam</code>
+2. Restart the daemon:
+   <code>bash
+   kubectl rollout restart deployment/clamav -n email-security-prod</code></p>
+<h3 id="scenario-c-emergency-fallback-bypass">Scenario C: Emergency Fallback / Bypass</h3>
+<p>If ClamAV cannot be restored immediately and you wish to explicitly silence alerts while relying on cloud Threat Intel:</p>
+<pre><code class="language-bash">kubectl set env deployment/email-auth-gateway -n email-security-prod CLAMD_HOST=&quot;&quot;
+</code></pre>
+<p><em>(Remember to restore <code>CLAMD_HOST</code> once ClamAV is fixed!)</em></p>
+<hr />
+<h2 id="4-post-recovery-verification">4. Post-Recovery Verification</h2>
+<ol>
+<li>Verify ClamAV responds with <code>PONG</code>:
+   <code>bash
+   kubectl exec -it -n email-security-prod deployment/email-auth-gateway -- \
+     python3 -c "import socket; s = socket.create_connection(('$CLAMD_HOST', int('$CLAMD_PORT'))); s.sendall(b'zPING\0'); print(s.recv(1024))"</code></li>
+<li>Confirm gateway circuit breaker resets to CLOSED and logs clean scans:
+   <code>bash
+   kubectl logs -n email-security-prod -l app.kubernetes.io/name=email-auth-gateway --tail=50 | grep -i "ClamAV scan clean"</code></li>
+</ol>
+
+    <div class="doc-footer">
+      <span>email-auth-gateway enterprise documentation suite</span>
+      <a href="../index.html">Back to Full Portal ↗</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize Mermaid
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#161b22',
+      primaryColor: '#1f6feb',
+      primaryTextColor: '#e6edf3',
+      lineColor: '#58a6ff'
+    }
+  });
+
+  // Copy Code Buttons
+  document.querySelectorAll('pre').forEach(pre => {
+    if (pre.classList.contains('mermaid')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.onclick = () => {
+      const code = pre.querySelector('code');
+      navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    };
+    pre.appendChild(btn);
+  });
+</script>
+
+</body>
+</html>

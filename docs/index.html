@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>email-auth-gateway — Documentation</title>
+  <meta name="description" content="Complete documentation for email-auth-gateway: an enterprise-grade, multi-tenant email security gateway with SPF/DKIM/DMARC, content analysis, attachment scanning, and quarantine management." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-base: #0d1117;
+      --bg-surface: #161b22;
+      --bg-elevated: #1c2128;
+      --bg-hover: #21262d;
+      --border: #30363d;
+      --border-muted: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-blue-dim: #1f6feb;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #a371f7;
+      --accent-cyan: #39d353;
+      --glow-blue: rgba(88, 166, 255, 0.12);
+      --glow-purple: rgba(163, 113, 247, 0.08);
+      --sidebar-width: 280px;
+      --header-height: 60px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-height);
+      background: rgba(13, 17, 23, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .header-logo .shield {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #1f6feb 0%, #a371f7 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(88,166,255,0.35);
+    }
+
+    .header-badge {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-search {
+      margin-left: auto;
+      position: relative;
+    }
+
+    #search-input {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px 6px 34px;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #search-input:focus {
+      border-color: var(--accent-blue-dim);
+      box-shadow: 0 0 0 3px var(--glow-blue);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    /* ── LAYOUT ─────────────────────────────────────────────────── */
+    .layout {
+      display: flex;
+      padding-top: var(--header-height);
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ─────────────────────────────────────────────────── */
+    nav#sidebar {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      width: var(--sidebar-width);
+      height: calc(100vh - var(--header-height));
+      overflow-y: auto;
+      background: var(--bg-base);
+      border-right: 1px solid var(--border);
+      padding: 20px 0 40px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    nav#sidebar::-webkit-scrollbar { width: 4px; }
+    nav#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .nav-section {
+      padding: 0 12px;
+      margin-bottom: 6px;
+    }
+
+    .nav-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 12px 8px 4px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      transition: background 0.15s, color 0.15s;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-link.active {
+      background: var(--glow-blue);
+      color: var(--accent-blue);
+      font-weight: 500;
+    }
+
+    .nav-icon { font-size: 14px; flex-shrink: 0; }
+
+    /* ── MAIN CONTENT ───────────────────────────────────────────── */
+    main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 48px 56px 80px;
+      max-width: calc(var(--sidebar-width) + 900px);
+    }
+
+    /* ── SECTIONS ───────────────────────────────────────────────── */
+    .doc-section {
+      display: none;
+    }
+
+    .doc-section.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── TYPOGRAPHY ─────────────────────────────────────────────── */
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #e6edf3 0%, #8b949e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 36px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 24px 0 8px;
+    }
+
+    h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 16px 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    p { margin-bottom: 16px; color: var(--text-secondary); }
+
+    a { color: var(--accent-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    strong { color: var(--text-primary); font-weight: 600; }
+
+    ul, ol {
+      margin: 0 0 16px 20px;
+      color: var(--text-secondary);
+    }
+
+    li { margin-bottom: 4px; }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-muted);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--accent-blue);
+    }
+
+    pre {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-size: 13px;
+      line-height: 1.65;
+      position: relative;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* ── TABLES ─────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th {
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-muted);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-hover); }
+
+    /* ── CALLOUTS ───────────────────────────────────────────────── */
+    .callout {
+      border-left: 3px solid;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    .callout-warning { border-color: var(--accent-orange); background: rgba(210,153,34,0.06); }
+    .callout-info    { border-color: var(--accent-blue);   background: rgba(88,166,255,0.06); }
+    .callout-danger  { border-color: var(--accent-red);    background: rgba(248,81,73,0.06);  }
+    .callout-success { border-color: var(--accent-green);  background: rgba(63,185,80,0.06);  }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .callout-warning .callout-title { color: var(--accent-orange); }
+    .callout-info    .callout-title { color: var(--accent-blue);   }
+    .callout-danger  .callout-title { color: var(--accent-red);    }
+    .callout-success .callout-title { color: var(--accent-green);  }
+
+    /* ── SCORE PILLS ─────────────────────────────────────────────── */
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 24px 0;
+    }
+
+    .score-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .score-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .score-card .range {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .score-card .action {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .score-card .desc { font-size: 12px; color: var(--text-muted); }
+
+    .score-card.forward  { border-color: rgba(63,185,80,0.3);  }
+    .score-card.forward  .range  { color: var(--accent-green); }
+    .score-card.forward  .action { color: var(--accent-green); }
+    .score-card.warn     { border-color: rgba(210,153,34,0.3); }
+    .score-card.warn     .range  { color: var(--accent-orange);}
+    .score-card.warn     .action { color: var(--accent-orange);}
+    .score-card.quarantine { border-color: rgba(248,81,73,0.3); }
+    .score-card.quarantine .range  { color: var(--accent-red); }
+    .score-card.quarantine .action { color: var(--accent-red); }
+
+    /* ── HERO ─────────────────────────────────────────────────── */
+    .hero {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top left, rgba(31,111,235,0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse at bottom right, rgba(163,113,247,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .hero h1 { margin-bottom: 12px; font-size: 2.2rem; }
+    .hero p { font-size: 16px; max-width: 620px; margin-bottom: 24px; }
+
+    .hero-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+
+    .badge-blue   { color: var(--accent-blue);   border-color: rgba(88,166,255,0.3);   background: rgba(88,166,255,0.08); }
+    .badge-green  { color: var(--accent-green);  border-color: rgba(63,185,80,0.3);    background: rgba(63,185,80,0.08);  }
+    .badge-purple { color: var(--accent-purple); border-color: rgba(163,113,247,0.3);  background: rgba(163,113,247,0.08);}
+    .badge-orange { color: var(--accent-orange); border-color: rgba(210,153,34,0.3);   background: rgba(210,153,34,0.08); }
+
+    /* ── MODULE GRID ─────────────────────────────────────────────── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .module-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    }
+
+    .module-card:hover {
+      border-color: var(--accent-blue-dim);
+      background: var(--bg-elevated);
+      transform: translateY(-1px);
+    }
+
+    .module-card-icon { font-size: 22px; margin-bottom: 10px; }
+    .module-card-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .module-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── PIPELINE DIAGRAM ─────────────────────────────────────────── */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin: 24px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .pipeline-step {
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .pipeline-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 24px;
+      flex-shrink: 0;
+    }
+
+    .pipeline-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-blue);
+      background: var(--bg-base);
+      flex-shrink: 0;
+      margin-top: 14px;
+    }
+
+    .pipeline-line {
+      width: 2px;
+      flex: 1;
+      background: var(--border);
+      margin: 0 auto;
+    }
+
+    .pipeline-content {
+      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 4px;
+    }
+
+    .pipeline-content strong { color: var(--accent-blue); }
+    .pipeline-content p { margin: 0; font-size: 12.5px; }
+
+    /* ── API ENDPOINT ─────────────────────────────────────────────── */
+    .endpoint {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin: 16px 0;
+      overflow: hidden;
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .method {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .method-get  { background: rgba(63,185,80,0.15);  color: var(--accent-green); }
+    .method-post { background: rgba(88,166,255,0.15); color: var(--accent-blue);  }
+
+    .endpoint-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .endpoint-body { padding: 16px 18px; }
+
+    /* ── CHECKLIST ───────────────────────────────────────────────── */
+    .checklist { list-style: none; margin: 0 0 16px 0; }
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .checklist li:last-child { border-bottom: none; }
+
+    .check-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── MERMAID ─────────────────────────────────────────────────── */
+    .mermaid {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    /* ── COPY BUTTON ─────────────────────────────────────────────── */
+    .pre-wrap { position: relative; }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.15s, color 0.15s;
+      opacity: 0;
+    }
+
+    .pre-wrap:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    /* ── SEARCH HIGHLIGHT ───────────────────────────────────────── */
+    mark { background: rgba(210,153,34,0.3); color: var(--accent-orange); border-radius: 2px; }
+
+    /* ── SCROLLBAR ──────────────────────────────────────────────── */
+    main { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav#sidebar { display: none; }
+      main { margin-left: 0; padding: 32px 24px 60px; }
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+<header>
+  <a class="header-logo" href="#" onclick="showSection('overview')">
+    <div class="shield">🛡️</div>
+    <span>email-auth-gateway</span>
+  </a>
+  <span class="header-badge">v1.0</span>
+  <div class="header-search">
+    <span class="search-icon">🔍</span>
+    <input id="search-input" type="text" placeholder="Search docs..." autocomplete="off" />
+  </div>
+</header>
+
+<!-- ── LAYOUT ───────────────────────────────────────────────────────────── -->
+<div class="layout">
+
+<!-- ── SIDEBAR ─────────────────────────────────────────────────────────── -->
+<nav id="sidebar">
+
+  <div class="nav-section">
+    <div class="nav-section-title">Getting Started</div>
+    <a class="nav-link active" onclick="showSection('overview')" id="nav-overview">
+      <span class="nav-icon">🏠</span> Overview
+    </a>
+    <a class="nav-link" onclick="showSection('quickstart')" id="nav-quickstart">
+      <span class="nav-icon">⚡</span> Quick Start
+    </a>
+    <a class="nav-link" onclick="showSection('architecture')" id="nav-architecture">
+      <span class="nav-icon">🏗️</span> Architecture
+    </a>
+    <a class="nav-link" onclick="showSection('configuration')" id="nav-configuration">
+      <span class="nav-icon">⚙️</span> Configuration
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">API Reference</div>
+    <a class="nav-link" onclick="showSection('api')" id="nav-api">
+      <span class="nav-icon">📡</span> REST API
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Modules</div>
+    <a class="nav-link" onclick="showSection('mod-auth')" id="nav-mod-auth">
+      <span class="nav-icon">🔐</span> auth_checker
+    </a>
+    <a class="nav-link" onclick="showSection('mod-content')" id="nav-mod-content">
+      <span class="nav-icon">🔍</span> content_analysis
+    </a>
+    <a class="nav-link" onclick="showSection('mod-attachment')" id="nav-mod-attachment">
+      <span class="nav-icon">📎</span> attachment_analysis
+    </a>
+    <a class="nav-link" onclick="showSection('mod-decision')" id="nav-mod-decision">
+      <span class="nav-icon">⚖️</span> decision_engine
+    </a>
+    <a class="nav-link" onclick="showSection('mod-delivery')" id="nav-mod-delivery">
+      <span class="nav-icon">📬</span> delivery
+    </a>
+    <a class="nav-link" onclick="showSection('mod-security')" id="nav-mod-security">
+      <span class="nav-icon">🛡️</span> security
+    </a>
+    <a class="nav-link" onclick="showSection('mod-resilience')" id="nav-mod-resilience">
+      <span class="nav-icon">🔄</span> resilience
+    </a>
+    <a class="nav-link" onclick="showSection('mod-storage')" id="nav-mod-storage">
+      <span class="nav-icon">🗄️</span> storage
+    </a>
+    <a class="nav-link" onclick="showSection('mod-audit')" id="nav-mod-audit">
+      <span class="nav-icon">📋</span> audit
+    </a>
+    <a class="nav-link" onclick="showSection('mod-tenancy')" id="nav-mod-tenancy">
+      <span class="nav-icon">🏢</span> multi_tenancy
+    </a>
+    <a class="nav-link" onclick="showSection('mod-observability')" id="nav-mod-observability">
+      <span class="nav-icon">📊</span> observability
+    </a>
+    <a class="nav-link" onclick="showSection('mod-compliance')" id="nav-mod-compliance">
+      <span class="nav-icon">📜</span> compliance
+    </a>
+    <a class="nav-link" onclick="showSection('mod-threat-intel')" id="nav-mod-threat-intel">
+      <span class="nav-icon">🎯</span> threat_intel
+    </a>
+    <a class="nav-link" onclick="showSection('mod-toc')" id="nav-mod-toc">
+      <span class="nav-icon">🔗</span> time_of_click
+    </a>
+    <a class="nav-link" onclick="showSection('mod-identity')" id="nav-mod-identity">
+      <span class="nav-icon">👤</span> identity & rbac
+    </a>
+    <a class="nav-link" onclick="showSection('mod-admin-ui')" id="nav-mod-admin-ui">
+      <span class="nav-icon">🖥️</span> admin_ui
+    </a>
+    <a class="nav-link" onclick="showSection('mod-scalability')" id="nav-mod-scalability">
+      <span class="nav-icon">⚡</span> scalability
+    </a>
+    <a class="nav-link" onclick="showSection('mod-reliability')" id="nav-mod-reliability">
+      <span class="nav-icon">🛡️</span> reliability & dr
+    </a>
+    <a class="nav-link" onclick="showSection('mod-security-hardening')" id="nav-mod-security-hardening">
+      <span class="nav-icon">🔒</span> security_hardening
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Deployment</div>
+    <a class="nav-link" onclick="showSection('deploy-docker')" id="nav-deploy-docker">
+      <span class="nav-icon">🐳</span> Docker
+    </a>
+    <a class="nav-link" onclick="showSection('deploy-k8s')" id="nav-deploy-k8s">
+      <span class="nav-icon">☸️</span> Kubernetes
+    </a>
+    <a class="nav-link" onclick="showSection('deploy-helm')" id="nav-deploy-helm">
+      <span class="nav-icon">⛵</span> Helm
+    </a>
+    <a class="nav-link" onclick="showSection('deploy-terraform')" id="nav-deploy-terraform">
+      <span class="nav-icon">🌍</span> Terraform
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Security</div>
+    <a class="nav-link" onclick="showSection('threat-model')" id="nav-threat-model">
+      <span class="nav-icon">⚠️</span> Threat Model
+    </a>
+    <a class="nav-link" onclick="showSection('hardening')" id="nav-hardening">
+      <span class="nav-icon">🔒</span> Hardening
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Operations</div>
+    <a class="nav-link" onclick="showSection('runbooks')" id="nav-runbooks">
+      <span class="nav-icon">📖</span> Runbooks
+    </a>
+  </div>
+
+</nav>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────────────── -->
+<main id="main-content">
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<section class="doc-section active" id="section-overview">
+  <div class="hero">
+    <h1>email-auth-gateway</h1>
+    <p>Enterprise-grade, multi-tenant email security gateway. Pre-delivery inspection with SPF/DKIM/DMARC authentication, content and URL analysis, attachment scanning, AI-driven decision scoring, and encrypted quarantine — all in a single deployable service.</p>
+    <div class="hero-badges">
+      <span class="badge badge-blue">🐍 Python 3.11+</span>
+      <span class="badge badge-green">⚡ FastAPI</span>
+      <span class="badge badge-purple">🔐 Fernet Encryption</span>
+      <span class="badge badge-blue">☸️ Kubernetes-Ready</span>
+      <span class="badge badge-orange">📊 Prometheus</span>
+      <span class="badge badge-green">✅ 165 Tests</span>
+    </div>
+  </div>
+
+  <h2>What it does</h2>
+  <p>Every inbound email passes through three parallel analysis stages before the decision engine assigns a routing action:</p>
+
+  <div class="score-grid">
+    <div class="score-card forward">
+      <div class="range">0–29</div>
+      <div class="action">FORWARD</div>
+      <div class="desc">Relay message as-is to destination</div>
+    </div>
+    <div class="score-card warn">
+      <div class="range">30–69</div>
+      <div class="action">WARN &amp; STRIP</div>
+      <div class="desc">Prefix subject, defang URLs, strip attachments</div>
+    </div>
+    <div class="score-card quarantine">
+      <div class="range">70+</div>
+      <div class="action">QUARANTINE</div>
+      <div class="desc">Encrypt, store, notify — admin reviews</div>
+    </div>
+  </div>
+
+  <h2>Key Modules</h2>
+  <div class="module-grid">
+    <div class="module-card" onclick="showSection('mod-auth')">
+      <div class="module-card-icon">🔐</div>
+      <div class="module-card-name">auth_checker</div>
+      <div class="module-card-desc">SPF, DKIM, DMARC, ARC, BIMI, FCrDNS, MTA-STS, IP reputation</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-content')">
+      <div class="module-card-icon">🔍</div>
+      <div class="module-card-name">content_analysis</div>
+      <div class="module-card-desc">Keywords, URLs, typosquat, homoglyphs, QR codes, OCR, evasion</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-attachment')">
+      <div class="module-card-icon">📎</div>
+      <div class="module-card-name">attachment_analysis</div>
+      <div class="module-card-desc">MIME extraction, ClamAV, VirusTotal, magic bytes, archive bombs</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-decision')">
+      <div class="module-card-icon">⚖️</div>
+      <div class="module-card-name">decision_engine</div>
+      <div class="module-card-desc">Score aggregation, VIP policy, campaign clustering, explainability</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-delivery')">
+      <div class="module-card-icon">📬</div>
+      <div class="module-card-name">delivery</div>
+      <div class="module-card-desc">SMTP relay, message modification, encrypted quarantine, DLP</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-security')">
+      <div class="module-card-icon">🛡️</div>
+      <div class="module-card-name">security</div>
+      <div class="module-card-desc">Auth, rate limiting, mTLS, redaction, Fernet encryption</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-tenancy')">
+      <div class="module-card-icon">🏢</div>
+      <div class="module-card-name">multi_tenancy</div>
+      <div class="module-card-desc">Isolated quarantine, per-tenant keys, MSP admin view</div>
+    </div>
+    <div class="module-card" onclick="showSection('mod-observability')">
+      <div class="module-card-icon">📊</div>
+      <div class="module-card-name">observability</div>
+      <div class="module-card-desc">Prometheus metrics, OpenTelemetry tracing, SLOs, Grafana</div>
+    </div>
+  </div>
+
+  <h2>Pipeline Overview</h2>
+  <div class="mermaid">
+flowchart TD
+    A[📥 Inbound Provider\nSendGrid · Mailgun · SES · M365] --> B
+    B[🛡️ Security Layer\nAuth · Rate Limit · Dedup · Size Check] --> C
+    C{Analysis Stages} --> D & E & F
+    D[🔐 auth_checker\nSPF · DKIM · DMARC · ARC] --> G
+    E[🔍 content_analysis\nURLs · Keywords · Homoglyphs] --> G
+    F[📎 attachment_analysis\nClamAV · VirusTotal · Heuristics] --> G
+    G[⚖️ decision_engine\nScore Aggregation + Policy Layers] --> H
+    H{Action} --> I & J & K
+    I[✅ FORWARD\nRelay as-is]
+    J[⚠️ WARN & STRIP\nModify + Relay]
+    K[🚫 QUARANTINE\nEncrypt + Store + Notify]
+    G --> L[📋 audit/\nJSONL Trail]
+  </div>
+</section>
+
+<!-- ═══════════════ QUICK START ═══════════════ -->
+<section class="doc-section" id="section-quickstart">
+  <h1>Quick Start</h1>
+
+  <h2>1. Install</h2>
+  <div class="pre-wrap">
+    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code class="language-bash">git clone https://github.com/your-org/email-auth-gateway.git
+cd email-auth-gateway
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt</code></pre>
+  </div>
+
+  <h2>2. Configure</h2>
+  <div class="pre-wrap">
+    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code class="language-bash">cp .env.example .env
+
+# Generate secrets
+WEBHOOK_SHARED_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+RAW_MAIL_ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+
+echo "WEBHOOK_SHARED_SECRET=$WEBHOOK_SHARED_SECRET" >> .env
+echo "RAW_MAIL_ENCRYPTION_KEY=$RAW_MAIL_ENCRYPTION_KEY" >> .env</code></pre>
+  </div>
+
+  <h2>3. Start services</h2>
+  <div class="pre-wrap">
+    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code class="language-bash"># Full stack (gateway + Redis + ClamAV + Mailpit)
+docker compose up --build
+
+# Or just the gateway
+uvicorn webhook_receiver.app:app --host 0.0.0.0 --port 8000 --reload</code></pre>
+  </div>
+
+  <h2>4. Send a test message</h2>
+  <div class="pre-wrap">
+    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code class="language-bash">export SECRET="your-webhook-secret"
+
+curl -X POST "http://localhost:8000/webhooks/sendgrid/inbound/$SECRET" \
+  -F 'envelope={"from":"attacker@evil.com","to":["you@company.com"]}' \
+  -F 'from=CEO Name &lt;ceo-fake@gmail.com&gt;' \
+  -F 'text=URGENT: Wire $50,000. Verify: https://paypa1.com/login'</code></pre>
+  </div>
+
+  <h2>5. Run tests</h2>
+  <div class="pre-wrap">
+    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code class="language-bash">python3 -m pytest tests/ -v
+# 165 tests, all offline/local — runs in ~30 seconds</code></pre>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-title">ℹ️ Dry-run mode</div>
+    If <code>RELAY_HOST</code> is not set, the gateway computes all decisions and stores quarantine items but never actually relays mail. Safe for observation before pointing at live mail flow.
+  </div>
+</section>
+
+<!-- ═══════════════ ARCHITECTURE ═══════════════ -->
+<section class="doc-section" id="section-architecture">
+  <h1>Architecture</h1>
+
+  <h2>Data Flow</h2>
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="pipeline-connector"><div class="pipeline-dot"></div><div class="pipeline-line"></div></div>
+      <div class="pipeline-content"><strong>Security / Ingress Layer</strong><p>Webhook auth · Source IP allowlist · Rate limiting (120 req/min/IP) · Payload size check (25 MB) · Bounce detection · SHA-256 idempotency dedup</p></div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-connector"><div class="pipeline-dot"></div><div class="pipeline-line"></div></div>
+      <div class="pipeline-content"><strong>auth_checker</strong><p>SPF (RFC 7208) · DKIM (dkimpy) · DMARC + alignment · ARC chain validation · BIMI · FCrDNS · MTA-STS · IP reputation · DKIM key policy · Sender baseline</p></div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-connector"><div class="pipeline-dot"></div><div class="pipeline-line"></div></div>
+      <div class="pipeline-content"><strong>content_analysis</strong><p>BEC/urgency keywords · URL extraction · Typosquat (Levenshtein) · Homoglyph/IDN detection · Display-name spoofing · HTML evasion · QR code decoding · OCR · RTL override · URL redirect chains · Domain age (RDAP) · URL reputation (VirusTotal / Google Safe Browsing)</p></div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-connector"><div class="pipeline-dot"></div><div class="pipeline-line"></div></div>
+      <div class="pipeline-content"><strong>attachment_analysis</strong><p>MIME extraction · Dangerous extension heuristics · Double-extension detection · Magic byte verification · Polyglot detection · Archive recursion with bomb limits · Office macro detection · VirusTotal hash lookup · ClamAV live scan</p></div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-connector"><div class="pipeline-dot"></div><div class="pipeline-line"></div></div>
+      <div class="pipeline-content"><strong>decision_engine</strong><p>Score aggregation · Per-tenant thresholds &amp; stage weights · Allow/block precedence rules · VIP executive protection · Campaign clustering boost · Feedback loop trust adjustment · Shadow mode A/B testing · Explainability report</p></div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-connector"><div class="pipeline-dot"></div></div>
+      <div class="pipeline-content"><strong>delivery</strong><p>FORWARD → relay as-is · WARN_AND_STRIP → defang links + strip attachments + relay · QUARANTINE → Fernet encrypt + store + notify admin</p></div>
+    </div>
+  </div>
+
+  <h2>Scoring Model</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Check</th><th>Pass</th><th>Fail</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>SPF</code></td><td>0</td><td>+30 (fail) / +15 (softfail)</td><td>ARC mitigates if valid chain present</td></tr>
+      <tr><td><code>DKIM</code></td><td>0</td><td>+30 (invalid) / +15 (none)</td><td></td></tr>
+      <tr><td><code>DMARC</code></td><td>0</td><td>+50 (p=reject) / +35 (p=quarantine) / +10 (p=none)</td><td></td></tr>
+      <tr><td><code>FCrDNS</code></td><td>0</td><td>+15</td><td></td></tr>
+      <tr><td><code>MTA-STS enforce fail</code></td><td>0</td><td>+20</td><td></td></tr>
+      <tr><td>BEC keywords</td><td>0</td><td>+5 – +30</td><td>Per-tenant configurable</td></tr>
+      <tr><td>Typosquat / homoglyph</td><td>0</td><td>+20 – +40</td><td></td></tr>
+      <tr><td>VIP display name spoof</td><td>0</td><td>+25 – +40</td><td>Configurable VIP list</td></tr>
+      <tr><td>Malicious URL</td><td>0</td><td><strong>+100</strong></td><td>Auto-quarantine</td></tr>
+      <tr><td>Malware attachment</td><td>0</td><td><strong>+100</strong></td><td>Auto-quarantine; not bypassable by allowlist</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Trust Zones</h2>
+  <div class="mermaid">
+flowchart LR
+    subgraph Z1["Zone 1: Public Internet (Untrusted)"]
+        SRC[Sender MTAs\nPhishing URLs\nAttacker content]
+    end
+    subgraph Z2["Zone 2: Gateway Ingress (Verified)"]
+        WH["/webhooks/*\nSecret auth + Rate limit"]
+    end
+    subgraph Z3["Zone 3: Internal Network (Trusted)"]
+        REDIS[Redis]
+        WORKERS[Worker Pools]
+    end
+    subgraph Z4["Zone 4: Admin Zone (Authenticated + Audited)"]
+        ADMIN["/admin/*\nBearer token + RBAC"]
+    end
+    SRC --> Z2 --> Z3
+    Z4 -.-> Z3
+  </div>
+</section>
+
+<!-- ═══════════════ CONFIGURATION ═══════════════ -->
+<section class="doc-section" id="section-configuration">
+  <h1>Configuration Reference</h1>
+  <p>All configuration is via environment variables (or a <code>.env</code> file). Defined in <code>config/__init__.py</code> using <code>pydantic-settings</code>.</p>
+
+  <div class="callout callout-danger">
+    <div class="callout-title">🚨 Required for production</div>
+    <code>WEBHOOK_SHARED_SECRET</code>, <code>RAW_MAIL_ENCRYPTION_KEY</code>, and <code>ADMIN_SHARED_SECRET</code> must be set before exposing to the internet. The gateway will warn loudly at startup if any are missing.
+  </div>
+
+  <h2>Webhook Authentication</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>WEBHOOK_SHARED_SECRET</code></td><td><em>empty</em></td><td><strong>Required.</strong> URL path segment authenticating the inbound webhook. Generate: <code>python3 -c "import secrets; print(secrets.token_urlsafe(32))"</code></td></tr>
+      <tr><td><code>WEBHOOK_ALLOWED_SOURCE_IPS</code></td><td><em>[]</em></td><td>CSV of CIDR ranges to restrict webhook source IPs. Empty = disabled.</td></tr>
+      <tr><td><code>ADMIN_SHARED_SECRET</code></td><td><em>empty</em></td><td><strong>Required.</strong> Bearer token for <code>/admin/*</code>. Keep separate from webhook secret.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Delivery</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>RELAY_HOST</code></td><td><em>empty</em></td><td>SMTP relay hostname. <strong>Empty = dry-run mode</strong> (no mail actually sent).</td></tr>
+      <tr><td><code>RELAY_PORT</code></td><td><code>25</code></td><td>Use <code>587</code> with STARTTLS in production.</td></tr>
+      <tr><td><code>RELAY_START_TLS</code></td><td><code>true</code></td><td>Enable STARTTLS upgrade.</td></tr>
+      <tr><td><code>ENABLE_TAG_ONLY_MODE</code></td><td><code>false</code></td><td>Insert <code>X-Gateway-Verdict</code> headers instead of modifying/quarantining. Use in staging.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>External Integrations</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>VT_API_KEY</code></td><td><em>empty</em></td><td>VirusTotal API key. Without this, URL/file reputation returns <code>unknown</code>.</td></tr>
+      <tr><td><code>GSB_API_KEY</code></td><td><em>empty</em></td><td>Google Safe Browsing key. Fallback if VT key absent.</td></tr>
+      <tr><td><code>CLAMD_HOST</code></td><td><em>empty</em></td><td>ClamAV daemon host. Empty = ClamAV disabled.</td></tr>
+      <tr><td><code>CLAMD_PORT</code></td><td><code>3310</code></td><td>ClamAV daemon port.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Decision Thresholds</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>WARN_THRESHOLD</code></td><td><code>30</code></td><td>Score ≥ this → <code>WARN_AND_STRIP</code></td></tr>
+      <tr><td><code>QUARANTINE_THRESHOLD</code></td><td><code>70</code></td><td>Score ≥ this → <code>QUARANTINE</code></td></tr>
+      <tr><td><code>VIP_DISPLAY_NAMES</code></td><td><em>[]</em></td><td>CSV of protected executive names. E.g. <code>Jane Doe CEO,John Smith CFO</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ API ═══════════════ -->
+<section class="doc-section" id="section-api">
+  <h1>REST API Reference</h1>
+
+  <h2>Authentication</h2>
+  <p><strong>Inbound webhooks</strong>: secret embedded in URL path. Auth failures return <code>404</code> (not <code>401</code>) — deliberate security design.</p>
+  <p><strong>Admin endpoints</strong>: <code>Authorization: Bearer &lt;ADMIN_SHARED_SECRET&gt;</code> header required.</p>
+
+  <h2>Health Endpoints</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-path">/healthz</span>
+    </div>
+    <div class="endpoint-body">
+      <p>Liveness probe. Returns <code>200 {"status": "ok"}</code> if the process is alive.</p>
+    </div>
+  </div>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-path">/readyz</span>
+    </div>
+    <div class="endpoint-body">
+      <p>Readiness probe. Checks Redis, ClamAV config, relay config. Returns <code>503</code> if critical dependencies are down.</p>
+      <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-json">{"status": "ready", "redis": "ok", "clamav": "configured", "relay": "configured"}</code></pre></div>
+    </div>
+  </div>
+
+  <h2>Inbound Webhooks</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method method-post">POST</span>
+      <span class="endpoint-path">/webhooks/sendgrid/inbound/{secret}</span>
+    </div>
+    <div class="endpoint-body">
+      <p>Receives inbound email from SendGrid Inbound Parse. <code>multipart/form-data</code> payload.</p>
+      <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-json">{
+  "message_id": "msg_abc123",
+  "action": "quarantine",
+  "score": 95,
+  "reasons": [
+    "SPF hard fail",
+    "DMARC fail under p=reject",
+    "typosquat domain paypa1.com"
+  ]
+}</code></pre></div>
+    </div>
+  </div>
+
+  <p>Also available: <code>POST /webhooks/mailgun/inbound</code>, <code>POST /webhooks/ses/inbound</code>, <code>POST /webhooks/postmark/inbound</code>, <code>POST /webhooks/m365/inbound</code>, <code>POST /webhooks/google/inbound</code></p>
+
+  <h2>Admin: Quarantine</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-path">/admin/quarantine</span>
+    </div>
+    <div class="endpoint-body"><p>List all pending quarantine items. Requires bearer token.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method method-post">POST</span>
+      <span class="endpoint-path">/admin/quarantine/{id}/release</span>
+    </div>
+    <div class="endpoint-body">
+      <p>Release a quarantined message. Relays the original, unmodified message. Operator identity recorded in audit log.</p>
+      <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash">curl -X POST http://localhost:8000/admin/quarantine/q_abc123/release \
+  -H "Authorization: Bearer $ADMIN_SHARED_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"resolved_by":"analyst@company.com","note":"false positive"}'</code></pre></div>
+    </div>
+  </div>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method method-post">POST</span>
+      <span class="endpoint-path">/admin/quarantine/{id}/reject</span>
+    </div>
+    <div class="endpoint-body"><p>Mark as reviewed; message stays on disk. Implements the "avoid blind dropping" design rule.</p></div>
+  </div>
+
+  <h2>Error Codes</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>200</code></td><td>Success</td></tr>
+      <tr><td><code>400</code></td><td>Bad request (malformed payload, oversized body)</td></tr>
+      <tr><td><code>401</code></td><td>Admin auth failure</td></tr>
+      <tr><td><code>404</code></td><td>Webhook secret mismatch (deliberate — see security design)</td></tr>
+      <tr><td><code>429</code></td><td>Rate limit exceeded</td></tr>
+      <tr><td><code>503</code></td><td>Service unavailable (readiness probe)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ AUTH_CHECKER ═══════════════ -->
+<section class="doc-section" id="section-mod-auth">
+  <h1>Module: auth_checker</h1>
+  <p>Implements the gateway's full authentication stack. All checks run on every message and contribute <code>score_delta</code> values to the decision engine.</p>
+
+  <h2>Checks</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Check</th><th>Implementation</th><th>Score on Fail</th></tr></thead>
+    <tbody>
+      <tr><td><strong>SPF</strong></td><td>RFC 7208, own evaluator</td><td>+30 (fail) / +15 (softfail)</td></tr>
+      <tr><td><strong>DKIM</strong></td><td><code>dkimpy</code></td><td>+30 (invalid) / +15 (none)</td></tr>
+      <tr><td><strong>DMARC</strong></td><td>DNS fetch + identifier alignment</td><td>+10–+50 depending on policy</td></tr>
+      <tr><td><strong>ARC</strong></td><td>Validates ARC-Seal chain</td><td>Mitigates SPF/DMARC if valid</td></tr>
+      <tr><td><strong>BIMI</strong></td><td>DNS fetch, VMC validation</td><td>Soft trust signal (no score delta)</td></tr>
+      <tr><td><strong>FCrDNS</strong></td><td>PTR → A forward confirmation</td><td>+15</td></tr>
+      <tr><td><strong>MTA-STS</strong></td><td>Policy fetch + header check</td><td>+20 (enforce_failed)</td></tr>
+      <tr><td><strong>IP Reputation</strong></td><td>DNSBL (Spamhaus ZEN)</td><td>+15–+30</td></tr>
+      <tr><td><strong>DKIM Key Policy</strong></td><td>Algorithm/key-length check</td><td>+5–+15</td></tr>
+      <tr><td><strong>Sender Baseline</strong></td><td>Historical domain/IP tracking</td><td>+10–+20 (first contact)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">⚠️ Known Limitation</div>
+    DMARC org-domain resolution uses a naive last-two-labels heuristic — wrong for multi-label ccTLDs like <code>.co.uk</code>. Replace with <code>publicsuffix2</code>/<code>tldextract</code> before processing such domains.
+  </div>
+
+  <h2>Usage</h2>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-python">from auth_checker import run_auth_checks
+
+verdict = run_auth_checks(
+    raw_message=raw_bytes,
+    client_ip="203.0.113.5",
+    envelope_from="sender@example.com",
+)
+print(verdict.score_delta)  # e.g. 65
+print(verdict.reasons)      # ["SPF hard fail", "DMARC fail under p=reject"]</code></pre></div>
+</section>
+
+<!-- ═══════════════ CONTENT_ANALYSIS ═══════════════ -->
+<section class="doc-section" id="section-mod-content">
+  <h1>Module: content_analysis</h1>
+  <p>Detects phishing, BEC, and social engineering signals in email body and headers across 15+ detection techniques.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Detection</th><th>File</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>BEC keywords</td><td><code>keywords.py</code></td><td>Urgency phrases, wire transfer, account suspension patterns</td></tr>
+      <tr><td>URL typosquat</td><td><code>urls.py</code></td><td>Levenshtein distance ≤ 2 from watchlist domains</td></tr>
+      <tr><td>Homoglyph / IDN</td><td><code>homoglyphs.py</code></td><td>Cyrillic/Latin substitution, punycode decoding</td></tr>
+      <tr><td>Display name spoof</td><td><code>display_name.py</code></td><td>Matches VIP_DISPLAY_NAMES against any <code>From:</code> display value</td></tr>
+      <tr><td>HTML evasion</td><td><code>html_evasion.py</code></td><td>Hidden text, zero-size fonts, split-tag obfuscation</td></tr>
+      <tr><td>QR code (quishing)</td><td><code>qr_detector.py</code></td><td>Decodes QR codes in images, feeds URLs to reputation checks</td></tr>
+      <tr><td>OCR</td><td><code>ocr_scanner.py</code></td><td>Tesseract OCR on image-only email bodies</td></tr>
+      <tr><td>RTL override</td><td><code>rtl_detector.py</code></td><td>Detects U+202E used to disguise filenames</td></tr>
+      <tr><td>URL redirects</td><td><code>url_redirects.py</code></td><td>Resolves shorteners to final destination (SSRF-safe)</td></tr>
+      <tr><td>URL reputation</td><td><code>reputation.py</code></td><td>VirusTotal / Google Safe Browsing (+100 on malicious)</td></tr>
+      <tr><td>Domain age</td><td><code>caching.py</code> + RDAP</td><td>Newly registered domains (< 30 days) flagged</td></tr>
+      <tr><td>Multi-language</td><td><code>multilang_keywords.py</code></td><td>Keyword detection in 15+ languages</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ ATTACHMENT_ANALYSIS ═══════════════ -->
+<section class="doc-section" id="section-mod-attachment">
+  <h1>Module: attachment_analysis</h1>
+  <p>Extracts and inspects all MIME attachments through a layered scanning pipeline.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Check</th><th>File</th><th>Score</th></tr></thead>
+    <tbody>
+      <tr><td>Dangerous extension</td><td><code>extensions.py</code></td><td>+30–+50</td></tr>
+      <tr><td>Double extension (file.pdf.exe)</td><td><code>extensions.py</code></td><td>+20</td></tr>
+      <tr><td>Magic byte mismatch</td><td><code>magic_bytes.py</code></td><td>+50</td></tr>
+      <tr><td>Archive bomb / deep recursion</td><td><code>archives.py</code></td><td>+40</td></tr>
+      <tr><td>Office macros / OLE</td><td><code>document_analysis.py</code></td><td>+20–+40</td></tr>
+      <tr><td>Polyglot file</td><td><code>polyglot.py</code></td><td>+30</td></tr>
+      <tr><td>VirusTotal hash lookup</td><td><code>reputation.py</code></td><td><strong>+100</strong></td></tr>
+      <tr><td>ClamAV live scan</td><td><code>reputation.py</code></td><td><strong>+100</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout callout-info">
+    <div class="callout-title">ℹ️ Fail-Open Design</div>
+    ClamAV fails open — if the daemon is unreachable, the scan is skipped (not failed). A ClamAV outage never blocks mail delivery. Monitor the <code>ClamAVUnreachable</code> alert closely.
+  </div>
+</section>
+
+<!-- ═══════════════ DECISION_ENGINE ═══════════════ -->
+<section class="doc-section" id="section-mod-decision">
+  <h1>Module: decision_engine</h1>
+  <p>Aggregates stage scores and applies enterprise policy layers to produce a final routing decision.</p>
+
+  <h2>Decision Logic</h2>
+  <div class="pre-wrap"><pre><code class="language-python">total = sum(stage.score_delta * weight for stage in stages)
+       + feedback_adjustment
+       + vip_score_boost
+       + campaign_boost
+
+if block_rule: action = QUARANTINE
+elif allow_rule and no_malware: action = FORWARD
+elif total >= quarantine_threshold: action = QUARANTINE
+elif total >= warn_threshold: action = WARN_AND_STRIP
+else: action = FORWARD</code></pre></div>
+
+  <h2>Policy Layers</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Layer</th><th>File</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>Per-tenant thresholds</td><td><code>tenant_config.py</code></td><td>Override warn/quarantine thresholds per tenant</td></tr>
+      <tr><td>Stage weights</td><td><code>tenant_config.py</code></td><td>Amplify or reduce a stage's score_delta per tenant</td></tr>
+      <tr><td>Allow / block rules</td><td><code>allow_block.py</code></td><td>Precedence overrides for known good/bad senders</td></tr>
+      <tr><td>VIP protection</td><td><code>vip_policy.py</code></td><td>Score boost + lowered threshold for executive impersonation</td></tr>
+      <tr><td>Campaign clustering</td><td><code>campaign_clustering.py</code></td><td>Boost score when same content seen across many senders</td></tr>
+      <tr><td>Feedback loop</td><td><code>feedback_loop.py</code></td><td>Adjust score based on analyst release/confirm history</td></tr>
+      <tr><td>Shadow mode</td><td><code>shadow_mode.py</code></td><td>A/B test experimental rules without affecting routing</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ DELIVERY ═══════════════ -->
+<section class="doc-section" id="section-mod-delivery">
+  <h1>Module: delivery</h1>
+  <p>Acts on the routing decision. Three delivery paths, plus DLP, retroactive zap, and user-reported phishing.</p>
+
+  <h2>Delivery Paths</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Action</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr><td><strong>FORWARD</strong></td><td>Relay raw message as-is via SMTP</td></tr>
+      <tr><td><strong>WARN_AND_STRIP</strong></td><td>Prefix subject with [SUSPICIOUS], defang all links (<code>hxxps[://]</code>), strip attachments (replace with notice), then relay. If modification fails → escalate to QUARANTINE</td></tr>
+      <tr><td><strong>QUARANTINE</strong></td><td>Fernet-encrypt message, write to <code>QUARANTINE_DIR</code>, notify via Slack webhook or log</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Quarantine Release vs Reject</h2>
+  <div class="callout callout-info">
+    <div class="callout-title">ℹ️ Design Decision</div>
+    <strong>Release</strong> delivers the <em>original, unmodified</em> message — the point of release is correcting a false positive, not re-delivering a defanged version of a message you just decided was safe. <strong>Reject</strong> marks as reviewed but keeps on disk — no blind dropping.
+  </div>
+</section>
+
+<!-- ═══════════════ SECURITY ═══════════════ -->
+<section class="doc-section" id="section-mod-security">
+  <h1>Module: security</h1>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Component</th><th>File</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>Webhook auth</td><td><code>webhook_auth.py</code></td><td>Constant-time secret comparison, 404 on failure, IP allowlist</td></tr>
+      <tr><td>Provider strategies</td><td><code>provider_auth.py</code></td><td>SendGrid (URL secret), Mailgun (HMAC), AWS SNS (RSA signature)</td></tr>
+      <tr><td>Rate limiting</td><td><code>rate_limit.py</code></td><td>Fixed window per-IP, Redis-backed for cross-instance sharing</td></tr>
+      <tr><td>PII redaction</td><td><code>redact.py</code></td><td>Strips API keys, passwords, PEM blocks from logs and audit trail</td></tr>
+      <tr><td>At-rest encryption</td><td><code>encryption.py</code></td><td>Fernet AES-128-CBC for stored .eml files and quarantine payloads</td></tr>
+      <tr><td>mTLS</td><td><code>mtls.py</code></td><td>TLS 1.3 client certs for internal inter-service channels</td></tr>
+      <tr><td>Secrets management</td><td><code>secrets_manager.py</code></td><td>Vault, AWS Secrets Manager, or env fallback</td></tr>
+      <tr><td>Bounce detection</td><td><code>bounce_detector.py</code></td><td>Empty envelope-from, Auto-Submitted header — skips relay loops</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ RESILIENCE ═══════════════ -->
+<section class="doc-section" id="section-mod-resilience">
+  <h1>Module: resilience</h1>
+  <p>Exponential backoff retry and circuit breaker protection for all external dependencies.</p>
+
+  <h2>Retry with Jitter</h2>
+  <p>Delay formula: <code>delay = base × 2^attempt + random(0, base)</code></p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Setting</th><th>Default</th></tr></thead>
+    <tbody>
+      <tr><td><code>EXTERNAL_CALL_MAX_ATTEMPTS</code></td><td>3</td></tr>
+      <tr><td><code>EXTERNAL_CALL_BACKOFF_BASE_SECONDS</code></td><td>0.25s</td></tr>
+      <tr><td><code>EXTERNAL_CALL_TIMEOUT_SECONDS</code></td><td>8.0s</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Circuit Breaker States</h2>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> CLOSED
+    CLOSED --> OPEN: 5 consecutive failures
+    OPEN --> HALF_OPEN: 30s timeout expires
+    HALF_OPEN --> CLOSED: next call succeeds
+    HALF_OPEN --> OPEN: next call fails
+  </div>
+
+  <p>Each external provider (VirusTotal, RDAP, GSB, ClamAV) has its own independent circuit breaker instance.</p>
+</section>
+
+<!-- ═══════════════ STORAGE ═══════════════ -->
+<section class="doc-section" id="section-mod-storage">
+  <h1>Module: storage</h1>
+  <p>Uniform <code>KeyValueStore</code> interface with two implementations. Backs rate limiting, deduplication, and caching.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Implementation</th><th>When to use</th><th>Limitation</th></tr></thead>
+    <tbody>
+      <tr><td><code>InMemoryStore</code></td><td>Local dev, single process</td><td>Not shared across multiple gateway instances</td></tr>
+      <tr><td><code>RedisStore</code></td><td>Any multi-replica deployment</td><td><code>incr()</code> not fully atomic (INCR + EXPIRE race)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Key Patterns</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Use Case</th><th>Key Pattern</th><th>TTL</th></tr></thead>
+    <tbody>
+      <tr><td>Webhook deduplication</td><td><code>dedupe:&lt;sha256&gt;</code></td><td>24h</td></tr>
+      <tr><td>Rate limiting</td><td><code>rate:&lt;ip&gt;</code></td><td>60s</td></tr>
+      <tr><td>URL reputation cache</td><td><code>rep:&lt;url_hash&gt;</code></td><td>30m</td></tr>
+      <tr><td>Domain age cache</td><td><code>age:&lt;domain&gt;</code></td><td>6h</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ AUDIT ═══════════════ -->
+<section class="doc-section" id="section-mod-audit">
+  <h1>Module: audit</h1>
+  <p>Append-only, redacted JSONL audit trail with SHA-256 chain-of-custody linking each record to the stored encrypted message.</p>
+
+  <h2>Record Format</h2>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-json">{
+  "event": "message_processed",
+  "timestamp": "2026-09-10T12:34:56Z",
+  "message_id": "msg_abc123",
+  "tenant_id": "tenant_acme",
+  "from": "[REDACTED]@evil.com",
+  "content_hash": "sha256:f1e2d3...",
+  "action": "quarantine",
+  "score": 95,
+  "reasons": ["SPF hard fail", "DMARC fail"],
+  "auth": {"spf": "fail", "dkim": "none", "dmarc": "fail"}
+}</code></pre></div>
+
+  <div class="callout callout-info">
+    <div class="callout-title">ℹ️ Production Note</div>
+    Ship audit records to a log aggregator (Splunk, CloudTrail, Elasticsearch) — local JSONL files are not sufficient for compliance. Use FluentBit or a sidecar to tail and forward.
+  </div>
+</section>
+
+<!-- ═══════════════ MULTI TENANCY ═══════════════ -->
+<section class="doc-section" id="section-mod-tenancy">
+  <h1>Module: multi_tenancy</h1>
+  <p>Strict data isolation between tenants with per-tenant encryption keys and rate limits. Addresses the <strong>Critical</strong> STRIDE threat: <em>Tenant A accessing Tenant B's quarantined mail</em>.</p>
+
+  <h2>Isolation Model</h2>
+  <ul>
+    <li>Separate quarantine directory per tenant: <code>&lt;QUARANTINE_DIR&gt;/&lt;tenant_id&gt;/</code></li>
+    <li>Per-tenant Fernet encryption key — rotating Tenant A's key does not affect Tenant B</li>
+    <li>All quarantine API calls are scoped — cross-tenant access is impossible by construction</li>
+    <li>Rate limits are keyed <code>rate:&lt;tenant_id&gt;:&lt;client_ip&gt;</code> — one tenant cannot exhaust another's quota</li>
+  </ul>
+
+  <h2>MSP Admin View</h2>
+  <p><code>MSPAdminView</code> gives MSP operators a cross-tenant aggregate view. Requires <code>msp_admin</code> RBAC role. All MSP operations are audit-logged with operator identity.</p>
+</section>
+
+<!-- ═══════════════ OBSERVABILITY ═══════════════ -->
+<section class="doc-section" id="section-mod-observability">
+  <h1>Module: observability</h1>
+  <p>Prometheus metrics at <code>/metrics</code>, OpenTelemetry distributed tracing, SLO error budget tracking, and a Grafana dashboard definition.</p>
+
+  <h2>Key Metrics</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Metric</th><th>Type</th><th>Labels</th></tr></thead>
+    <tbody>
+      <tr><td><code>email_gateway_messages_total</code></td><td>Counter</td><td><code>action, tenant_id</code></td></tr>
+      <tr><td><code>email_gateway_message_processing_seconds</code></td><td>Histogram</td><td><code>tenant_id</code></td></tr>
+      <tr><td><code>email_gateway_circuit_breaker_state</code></td><td>Gauge</td><td><code>provider</code> (0=closed, 1=open)</td></tr>
+      <tr><td><code>email_gateway_quarantine_pending_items</code></td><td>Gauge</td><td><code>tenant_id</code></td></tr>
+      <tr><td><code>email_gateway_redis_connected</code></td><td>Gauge</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>SLO Targets</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>SLO</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td>Processing latency</td><td>99% of messages &lt; 5 seconds</td></tr>
+      <tr><td>Relay success rate</td><td>99.5% of FORWARD/WARN messages relayed</td></tr>
+      <tr><td>False positive rate</td><td>&lt; 0.1% (measured by quarantine release rate)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ COMPLIANCE ═══════════════ -->
+<section class="doc-section" id="section-mod-compliance">
+  <h1>Module: compliance</h1>
+  <p>GDPR Data Subject Rights, automated data retention and purge, legal hold, geographic data residency, and SOC 2 control mapping.</p>
+
+  <h2>GDPR Controls</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Right</th><th>Implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Article 15 — Access</td><td><code>DataSubjectRequestManager.export_subject_data()</code></td></tr>
+      <tr><td>Article 17 — Erasure</td><td><code>DataSubjectRequestManager.erase_subject_data()</code></td></tr>
+      <tr><td>Data retention</td><td><code>DataPurgeEngine</code> with configurable <code>RetentionPolicy</code></td></tr>
+      <tr><td>Legal hold</td><td><code>LegalHoldManager</code> — survives retention periods</td></tr>
+      <tr><td>Data residency</td><td><code>DataResidencyManager.enforce_residency()</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Default Retention Periods</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Data</th><th>Retention</th></tr></thead>
+    <tbody>
+      <tr><td>Raw mail (.eml.enc)</td><td>30 days</td></tr>
+      <tr><td>Quarantined mail</td><td>90 days</td></tr>
+      <tr><td>Processing audit log</td><td>1 year</td></tr>
+      <tr><td>Admin action log</td><td>3 years</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ THREAT INTEL ═══════════════ -->
+<section class="doc-section" id="section-mod-threat-intel">
+  <h1>Module: threat_intel</h1>
+  <p>External IOC feed ingestion (STIX/TAXII, MISP), Certificate Transparency log monitoring for lookalike brand domains, Newly Registered Domain (NRD) watchlist, and threat actor campaign clustering.</p>
+
+  <h2>Architecture</h2>
+  <div class="mermaid">
+flowchart LR
+    Feeds[STIX/TAXII & MISP Feeds] --> Mgr[IOCFeedManager]
+    CT[Certificate Transparency] --> CTMon[CTLogMonitor]
+    NRD[Domain Registrations] --> NRDW[NRDWatchlistEngine]
+    Mgr --> Engine[Decision Engine]
+    CTMon --> Track[CampaignTracker]
+    NRDW --> Engine
+  </div>
+
+  <h2>Key Features</h2>
+  <ul>
+    <li><strong>STIX/TAXII 2.1 & MISP:</strong> Polling and automated synchronization of IP, URL, and hash indicators.</li>
+    <li><strong>CT Log Monitoring:</strong> Proactive typosquat/lookalike detection on brand domains via Levenshtein distance & substring checks.</li>
+    <li><strong>NRD Watchlist:</strong> High-risk scoring penalty for domains registered &lt;14 days ago.</li>
+    <li><strong>Cross-Tenant Sharing:</strong> Sanitized, anonymized IOC sharing across enterprise client tenants.</li>
+  </ul>
+  <p><a href="modules/threat_intel.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ TIME OF CLICK ═══════════════ -->
+<section class="doc-section" id="section-mod-toc">
+  <h1>Module: time_of_click</h1>
+  <p>Defends against post-delivery weaponized links by rewriting URLs in inbound emails to route through a signed HMAC redirection proxy with real-time reputation analysis.</p>
+
+  <h2>How It Works</h2>
+  <div class="mermaid">
+sequenceDiagram
+    participant User as Recipient
+    participant Gateway as /toc/redirect Endpoint
+    participant Threat as Threat Feeds / VT
+    participant Target as Destination Server
+
+    User->>Gateway: Click link (url + HMAC signature)
+    Gateway->>Gateway: Verify HMAC (Prevents Open Redirect)
+    Gateway->>Threat: Live Reputation & Redirection Scan
+    alt Malicious Link
+      Gateway-->>User: 403 Red Phishing Warning Page
+    else Safe
+      Gateway-->>User: 302 Redirect
+      User->>Target: Safe Navigation
+    end
+  </div>
+  <p><a href="modules/time_of_click.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ IDENTITY & RBAC ═══════════════ -->
+<section class="doc-section" id="section-mod-identity">
+  <h1>Module: identity</h1>
+  <p>Enterprise authentication, OIDC/SAML Single Sign-On, RFC 6238 TOTP Multi-Factor Authentication (MFA), role-based access control, and cryptographic session token management.</p>
+
+  <h2>Roles & Permissions</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Role</th><th>Description</th><th>Key Privileges</th></tr></thead>
+    <tbody>
+      <tr><td><code>super_admin</code></td><td>Global platform administrator</td><td>All tenants, key rotation, system purge</td></tr>
+      <tr><td><code>tenant_admin</code></td><td>Tenant security lead</td><td>Tenant quarantine release, policy rules</td></tr>
+      <tr><td><code>analyst</code></td><td>SOC incident responder</td><td>Quarantine inspection, audit export</td></tr>
+      <tr><td><code>auditor</code></td><td>Governance officer</td><td>Read-only compliance & audit access</td></tr>
+    </tbody>
+  </table></div>
+  <p><a href="modules/identity.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ ADMIN UI ═══════════════ -->
+<section class="doc-section" id="section-mod-admin-ui">
+  <h1>Module: admin_ui</h1>
+  <p>Browser-based Security Operations Center (SOC) dashboard. Features live threat metrics, quarantine management with one-click release/reject, and safe sandboxed email previewing.</p>
+
+  <h2>Safe Email Preview Guarantees</h2>
+  <ul>
+    <li>Strips active JavaScript (<code>&lt;script&gt;</code>), applets, and hostile iframes.</li>
+    <li>Removes all inline event handlers (<code>onload</code>, <code>onerror</code>, <code>onclick</code>).</li>
+    <li>Neutralizes tracking beacons and external web bugs.</li>
+    <li>Defangs all clickable links to prevent accidental analyst clicks.</li>
+  </ul>
+  <p><a href="modules/admin_ui.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ SCALABILITY ═══════════════ -->
+<section class="doc-section" id="section-mod-scalability">
+  <h1>Module: scalability</h1>
+  <p>High-throughput asynchronous message queue with Dead-Letter Queue (DLQ), dynamic worker autoscaling, batch DNS resolver, cache pre-warming, and persistent database storage.</p>
+
+  <h2>Performance Accelerators</h2>
+  <ul>
+    <li><strong>Fast Ingestion:</strong> Immediate HTTP 202 Accepted response; heavy analysis offloaded to worker pool.</li>
+    <li><strong>Dead-Letter Queue (DLQ):</strong> Retains failed messages with exponential backoff; no email dropped.</li>
+    <li><strong>Batch DNS:</strong> Parallel async DNS lookups reduce DNS wait latency from 350ms to &lt;35ms.</li>
+    <li><strong>Cache Pre-Warming:</strong> Top 1,000 domains pre-cached on container boot to prevent cold-start spikes.</li>
+  </ul>
+  <p><a href="modules/scalability.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ RELIABILITY ═══════════════ -->
+<section class="doc-section" id="section-mod-reliability">
+  <h1>Module: reliability</h1>
+  <p>Graceful degradation matrix ("What Still Works When X Is Down"), provider outage retention policies, zero-downtime key rotation windows, chaos fault injection, and automated backup/restore verification.</p>
+
+  <h2>Graceful Degradation</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Failed Component</th><th>Gateway Fallback Behavior</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>VirusTotal API Down</td><td>Circuit breaker trips; falls back to local ClamAV & hash heuristics</td><td>Degraded / Safe</td></tr>
+      <tr><td>ClamAV Daemon Down</td><td>Fails open; applies extension & MIME risk heuristics</td><td>Degraded / Safe</td></tr>
+      <tr><td>Redis Down</td><td>Automatic fallback to in-memory KV cache and rate limiter</td><td>Degraded / Safe</td></tr>
+      <tr><td>Relay SMTP Down</td><td>Messages safely held in encrypted queue with exponential retry</td><td>Resilient Hold</td></tr>
+    </tbody>
+  </table></div>
+  <p><a href="modules/reliability.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ SECURITY HARDENING ═══════════════ -->
+<section class="doc-section" id="section-mod-security-hardening">
+  <h1>Module: security_hardening</h1>
+  <p>Automated API and webhook fuzzing harness, container CIS benchmark security scanner, Python CVE vulnerability auditor, and enterprise secrets manager integration (Vault / AWS / GCP).</p>
+
+  <h2>Hardening Checklist</h2>
+  <ul>
+    <li>Fuzzing against SQLi, Command Injection, Path Traversal, and ReDoS triggers.</li>
+    <li>Secrets retrieved dynamically from AWS Secrets Manager / HashiCorp Vault with TTL cache.</li>
+    <li>Non-root container execution (UID 10001) with read-only root filesystems and dropped Linux capabilities.</li>
+  </ul>
+  <p><a href="modules/security_hardening.html" style="font-weight:600;">View Dedicated Standalone Guide →</a></p>
+</section>
+
+<!-- ═══════════════ DOCKER ═══════════════ -->
+<section class="doc-section" id="section-deploy-docker">
+  <h1>Deployment: Docker</h1>
+
+  <h2>Full Stack</h2>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash">cp .env.example .env  # fill in secrets
+docker compose up --build</code></pre></div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Service</th><th>Port</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>email-auth-gateway</code></td><td>8000</td><td>FastAPI gateway</td></tr>
+      <tr><td><code>redis</code></td><td>6379</td><td>State, caching, rate limiting</td></tr>
+      <tr><td><code>clamav</code></td><td>3310</td><td>Malware scanning daemon</td></tr>
+      <tr><td><code>mailpit</code></td><td>1025/8025</td><td>SMTP trap + web UI</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Testing Failure Modes</h2>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash"># Test Redis fallback
+docker compose stop redis
+
+# Test ClamAV circuit breaker
+docker compose stop clamav
+
+# Restore
+docker compose start redis clamav</code></pre></div>
+</section>
+
+<!-- ═══════════════ KUBERNETES ═══════════════ -->
+<section class="doc-section" id="section-deploy-k8s">
+  <h1>Deployment: Kubernetes</h1>
+  <p>Complete manifests in <code>k8s/</code> for production HA deployment.</p>
+
+  <h2>Apply</h2>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash">kubectl apply -k k8s/ -n email-security-prod</code></pre></div>
+
+  <h2>Manifest Summary</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>File</th><th>Kind</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>deployment.yaml</code></td><td>Deployment</td><td>Gateway pods with probes and resource limits</td></tr>
+      <tr><td><code>hpa.yaml</code></td><td>HPA</td><td>5–25 replicas, CPU 60% / Memory 70%</td></tr>
+      <tr><td><code>pdb.yaml</code></td><td>PodDisruptionBudget</td><td>Minimum 2 pods during maintenance</td></tr>
+      <tr><td><code>networkpolicy.yaml</code></td><td>NetworkPolicy</td><td>Restricts egress to Redis, ClamAV, SMTP, DNS, HTTPS</td></tr>
+      <tr><td><code>ingress.yaml</code></td><td>Ingress</td><td>TLS via cert-manager</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">⚠️ Never commit real secrets</div>
+    Use ExternalSecretsOperator, Sealed Secrets, or CSI Secret Store Driver. Never put secrets in ConfigMap or committed values files.
+  </div>
+</section>
+
+<!-- ═══════════════ HELM ═══════════════ -->
+<section class="doc-section" id="section-deploy-helm">
+  <h1>Deployment: Helm</h1>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash">helm upgrade --install email-auth-gateway ./helm/email-auth-gateway \
+  --namespace email-security-prod \
+  --create-namespace \
+  --values values.prod.yaml \
+  --set secrets.webhookSharedSecret="$WEBHOOK_SHARED_SECRET"</code></pre></div>
+
+  <h2>Key Values</h2>
+  <div class="pre-wrap"><pre><code class="language-yaml">replicaCount: 5
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 25
+
+config:
+  enableTagOnlyMode: false  # true in staging
+  warnThreshold: 30
+  quarantineThreshold: 70
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod</code></pre></div>
+</section>
+
+<!-- ═══════════════ TERRAFORM ═══════════════ -->
+<section class="doc-section" id="section-deploy-terraform">
+  <h1>Deployment: Terraform</h1>
+  <p>IaC for AWS dependencies: ElastiCache Redis, S3 quarantine bucket with KMS, Secrets Manager, and IRSA roles.</p>
+
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash">cd terraform
+terraform init -backend-config="bucket=your-tfstate-bucket"
+terraform plan -var-file="environments/production/terraform.tfvars"
+terraform apply</code></pre></div>
+
+  <h2>Resources Created</h2>
+  <ul>
+    <li><strong>ElastiCache Redis</strong> — Multi-AZ, transit + at-rest KMS encryption</li>
+    <li><strong>S3 Quarantine Bucket</strong> — KMS CMK, versioning, lifecycle rules, block public access</li>
+    <li><strong>Secrets Manager</strong> — All gateway credentials, KMS-encrypted</li>
+    <li><strong>IAM IRSA Role</strong> — Scoped access for the gateway's K8s service account</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ THREAT MODEL ═══════════════ -->
+<section class="doc-section" id="section-threat-model">
+  <h1>Threat Model (STRIDE)</h1>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Category</th><th>Threat</th><th>Impact</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Spoofing</strong></td><td>Email domain spoofing</td><td>High</td><td>SPF, DKIM, DMARC, ARC, FCrDNS</td></tr>
+      <tr><td><strong>Spoofing</strong></td><td>Webhook payload forgery</td><td>Critical</td><td>Provider-specific auth (HMAC, SNS sig, URL secret)</td></tr>
+      <tr><td><strong>Tampering</strong></td><td>At-rest message modification</td><td>High</td><td>Fernet AES-128-CBC, per-tenant key isolation</td></tr>
+      <tr><td><strong>Tampering</strong></td><td>Time-of-Click link tampering</td><td>Medium</td><td>HMAC-SHA256 signed redirect links</td></tr>
+      <tr><td><strong>Repudiation</strong></td><td>Admin action without accountability</td><td>High</td><td>Operator-tied JSONL admin audit log</td></tr>
+      <tr><td><strong>Info Disclosure</strong></td><td>PII/credential leakage in logs</td><td>High</td><td>Centralized <code>security.redact</code> at all log call sites</td></tr>
+      <tr><td><strong>Info Disclosure</strong></td><td>Multi-tenant data exposure</td><td>Critical</td><td>Isolated storage paths + per-tenant Fernet keys</td></tr>
+      <tr><td><strong>DoS</strong></td><td>Webhook flooding</td><td>High</td><td>Redis rate limiting + 25 MB payload cap + async queue</td></tr>
+      <tr><td><strong>DoS</strong></td><td>ZIP bombs / archive recursion</td><td>High</td><td>Depth 3 limit, file count cap, decompression ratio check</td></tr>
+      <tr><td><strong>EoP</strong></td><td>Public caller hitting admin APIs</td><td>Critical</td><td>Network segmentation + RBAC + rate-limited auth</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════ HARDENING ═══════════════ -->
+<section class="doc-section" id="section-hardening">
+  <h1>Production Hardening Checklist</h1>
+
+  <h2>Secrets</h2>
+  <ul class="checklist">
+    <li><span class="check-icon"></span>Generate strong <code>WEBHOOK_SHARED_SECRET</code> (32+ random bytes)</li>
+    <li><span class="check-icon"></span>Generate Fernet <code>RAW_MAIL_ENCRYPTION_KEY</code></li>
+    <li><span class="check-icon"></span>Set separate <code>ADMIN_SHARED_SECRET</code> (never reuse webhook secret)</li>
+    <li><span class="check-icon"></span>Store all secrets in Vault / AWS Secrets Manager — not in .env files</li>
+    <li><span class="check-icon"></span>Rotate secrets on 90-day schedule</li>
+  </ul>
+
+  <h2>Network</h2>
+  <ul class="checklist">
+    <li><span class="check-icon"></span>Enable <code>WEBHOOK_ALLOWED_SOURCE_IPS</code> with provider CIDR ranges</li>
+    <li><span class="check-icon"></span>Separate public ingress from admin routes via NetworkPolicy</li>
+    <li><span class="check-icon"></span>Terminate TLS at the ingress controller</li>
+    <li><span class="check-icon"></span>Place a WAF in front of the ingress (OWASP CRS + rate limiting)</li>
+  </ul>
+
+  <h2>Data Protection</h2>
+  <ul class="checklist">
+    <li><span class="check-icon"></span>Set <code>QUARANTINE_DIR</code> to an encrypted S3 bucket (not <code>/tmp</code>)</li>
+    <li><span class="check-icon"></span>Set <code>AUDIT_LOG_PATH</code> to a path shipped to a log aggregator</li>
+    <li><span class="check-icon"></span>Enable per-tenant encryption key isolation for multi-tenant deployments</li>
+  </ul>
+
+  <h2>Alerting</h2>
+  <div class="pre-wrap"><pre><code class="language-yaml"># Alert: ClamAV circuit open
+- alert: ClamAVCircuitOpen
+  expr: email_gateway_circuit_breaker_state{provider="clamav"} == 1
+
+# Alert: Redis disconnected
+- alert: RedisDisconnected
+  expr: email_gateway_redis_connected == 0
+
+# Alert: Quarantine queue growing
+- alert: QuarantineQueueHigh
+  expr: email_gateway_quarantine_pending_items > 50</code></pre></div>
+</section>
+
+<!-- ═══════════════ RUNBOOKS ═══════════════ -->
+<section class="doc-section" id="section-runbooks">
+  <h1>Operational Runbooks</h1>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Alert</th><th>Severity</th><th>Trigger</th><th>Runbook</th></tr></thead>
+    <tbody>
+      <tr><td><code>RelayDown</code></td><td>SEV-2</td><td>SMTP relay refused / auth failure / 100% send failure</td><td><a href="../docs/runbooks/relay_down.md">relay_down.md</a></td></tr>
+      <tr><td><code>RedisClusterUnreachable</code></td><td>SEV-2</td><td>Redis heartbeat failure; gateway in degraded in-memory mode</td><td><a href="../docs/runbooks/redis_down.md">redis_down.md</a></td></tr>
+      <tr><td><code>QuarantineDiskFull</code></td><td>SEV-2</td><td>Storage &gt; 85% utilization</td><td><a href="../docs/runbooks/quarantine_disk_full.md">quarantine_disk_full.md</a></td></tr>
+      <tr><td><code>KeyRotationRequired</code></td><td>SEV-4</td><td>90-day schedule or credential leak</td><td><a href="../docs/runbooks/key_rotation.md">key_rotation.md</a></td></tr>
+      <tr><td><code>ClamAVUnreachable</code></td><td>SEV-2</td><td>ClamAV daemon crash or socket timeout</td><td><a href="../docs/runbooks/clamav_unreachable.md">clamav_unreachable.md</a></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Incident Severity</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Severity</th><th>Description</th><th>Response Time</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-orange">SEV-1</span></td><td>Entire mail flow halted</td><td>&lt; 15 minutes</td></tr>
+      <tr><td><span class="badge badge-orange">SEV-2</span></td><td>Degraded detection; Redis/ClamAV down; quarantine &gt; 85% full</td><td>&lt; 30 minutes</td></tr>
+      <tr><td><span class="badge badge-blue">SEV-3</span></td><td>Non-blocking external API failure; elevated latency</td><td>&lt; 2 hours</td></tr>
+      <tr><td><span class="badge badge-green">SEV-4</span></td><td>Minor warning; routine maintenance</td><td>Next business day</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Triage Commands</h2>
+  <div class="pre-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-bash"># Pod status
+kubectl get pods -n email-security-prod -l app.kubernetes.io/name=email-auth-gateway
+
+# Recent logs
+kubectl logs -n email-security-prod -l app.kubernetes.io/name=email-auth-gateway --tail=100 -f
+
+# Health check
+kubectl exec -it deployment/email-auth-gateway -n email-security-prod -- \
+  curl -s http://localhost:8000/healthz
+
+# HPA status
+kubectl top pods -n email-security-prod</code></pre></div>
+</section>
+
+</main>
+</div>
+
+<script>
+  // ── Section navigation ───────────────────────────────────────────
+  function showSection(id) {
+    document.querySelectorAll('.doc-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+    const section = document.getElementById('section-' + id);
+    if (section) section.classList.add('active');
+
+    const navLink = document.getElementById('nav-' + id);
+    if (navLink) navLink.classList.add('active');
+
+    window.scrollTo(0, 0);
+  }
+
+  // ── Copy button ──────────────────────────────────────────────────
+  function copyCode(btn) {
+    const code = btn.nextElementSibling.querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    });
+  }
+
+  // ── Search ────────────────────────────────────────────────────────
+  const searchInput = document.getElementById('search-input');
+  const sectionMap = {
+    'overview': ['overview', 'home', 'introduction', 'what'],
+    'quickstart': ['quick start', 'install', 'getting started', 'setup', 'run'],
+    'architecture': ['architecture', 'data flow', 'pipeline', 'diagram', 'scoring'],
+    'configuration': ['config', 'environment', 'variables', 'settings', '.env'],
+    'api': ['api', 'endpoint', 'rest', 'http', 'webhook', 'quarantine release'],
+    'mod-auth': ['spf', 'dkim', 'dmarc', 'arc', 'bimi', 'fcrdns', 'mta-sts', 'auth_checker', 'authentication'],
+    'mod-content': ['content', 'url', 'keyword', 'bec', 'phishing', 'homoglyph', 'qr', 'ocr', 'evasion'],
+    'mod-attachment': ['attachment', 'clamav', 'virustotal', 'malware', 'archive', 'zip bomb'],
+    'mod-decision': ['decision', 'scoring', 'vip', 'campaign', 'allow block', 'threshold', 'explainability'],
+    'mod-delivery': ['delivery', 'relay', 'warn and strip', 'quarantine', 'smtp', 'defang', 'dlp'],
+    'mod-security': ['security', 'rate limit', 'redact', 'encryption', 'mtls', 'secrets', 'bounce'],
+    'mod-resilience': ['resilience', 'retry', 'circuit breaker', 'backoff', 'jitter'],
+    'mod-storage': ['storage', 'redis', 'in-memory', 'kv', 'cache', 'dedup'],
+    'mod-audit': ['audit', 'jsonl', 'audit trail', 'chain of custody', 'logging'],
+    'mod-tenancy': ['tenant', 'multi-tenant', 'msp', 'isolation', 'per-tenant'],
+    'mod-observability': ['observability', 'prometheus', 'metrics', 'tracing', 'opentelemetry', 'slo', 'grafana'],
+    'mod-compliance': ['compliance', 'gdpr', 'dsar', 'soc 2', 'retention', 'residency', 'legal hold'],
+    'mod-threat-intel': ['threat intel', 'misp', 'stix', 'taxii', 'ct log', 'certificate transparency', 'nrd', 'watchlist', 'campaign'],
+    'mod-toc': ['time of click', 'toc', 'rewriter', 'safe links', 'redirect', 'hmac signature', 'post delivery'],
+    'mod-identity': ['identity', 'rbac', 'sso', 'oidc', 'saml', 'mfa', 'totp', 'jwt', 'tokens', 'roles'],
+    'mod-admin-ui': ['admin ui', 'dashboard', 'soc', 'sanitizer', 'safe preview', 'analytics'],
+    'mod-scalability': ['scalability', 'message queue', 'dlq', 'autoscaler', 'batch dns', 'cache warming', 'concurrency'],
+    'mod-reliability': ['reliability', 'degradation', 'chaos', 'key rotation', 'backup', 'restore', 'topology', 'outage'],
+    'mod-security-hardening': ['security hardening', 'pen test', 'fuzzing', 'vulnerability', 'cve', 'container scanner', 'vault'],
+    'deploy-docker': ['docker', 'compose', 'container', 'dockerfile'],
+    'deploy-k8s': ['kubernetes', 'k8s', 'kubectl', 'hpa', 'pdb', 'networkpolicy'],
+    'deploy-helm': ['helm', 'chart', 'values'],
+    'deploy-terraform': ['terraform', 'elasticache', 'aws', 'iac', 'infrastructure', 's3', 'kms'],
+    'threat-model': ['threat', 'stride', 'spoofing', 'tampering', 'repudiation', 'disclosure', 'dos', 'elevation'],
+    'hardening': ['hardening', 'checklist', 'security checklist', 'production'],
+    'runbooks': ['runbook', 'incident', 'on-call', 'alert', 'sev', 'triage'],
+  };
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    if (!q) return;
+
+    let bestSection = null;
+    let bestScore = 0;
+
+    for (const [section, keywords] of Object.entries(sectionMap)) {
+      const score = keywords.reduce((s, kw) => s + (kw.includes(q) || q.includes(kw) ? kw.length : 0), 0);
+      if (score > bestScore) { bestScore = score; bestSection = section; }
+    }
+
+    if (bestSection && bestScore > 0) showSection(bestSection);
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { searchInput.value = ''; searchInput.blur(); }
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll();
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        primaryColor: '#1f6feb',
+        primaryTextColor: '#e6edf3',
+        primaryBorderColor: '#30363d',
+        lineColor: '#58a6ff',
+        secondaryColor: '#161b22',
+        tertiaryColor: '#0d1117',
+        background: '#0d1117',
+        mainBkg: '#161b22',
+        nodeBorder: '#30363d',
+        clusterBkg: '#1c2128',
+        titleColor: '#e6edf3',
+        edgeLabelBackground: '#161b22',
+        fontFamily: 'Inter, sans-serif',
+      }
+    });
+  });
+</script>
+</body>
+</html>
