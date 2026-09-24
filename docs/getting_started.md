@@ -84,6 +84,22 @@ Expected response:
 }
 ```
 
+### 6. Access the SOC Admin UI Dashboard
+
+Open your web browser and navigate to:
+```
+http://localhost:8000/dashboard
+```
+(or `http://localhost:8000/admin/ui`).
+
+**Dashboard Capabilities:**
+- **Real-Time Operational Telemetry**: Displays 24-hour processed volume, pending quarantine counts, false positive rate (derived from analyst release actions), and high-risk threat detections.
+- **Quarantine Review Queue**: Search by sender, recipient, subject, or risk score; perform bulk releases or rejections.
+- **Safe Sandboxed Email Preview**: Click **Preview** on any quarantined item to view defanged plain-text and HTML safely stripped of scripts, tracking beacons, and active iframes.
+- **Multi-Language Selector (7 Languages)**: Toggle the interface between English (`en`), Español (`es`), Deutsch (`de`), Français (`fr`), 日本語 (`ja`), 中文 (`zh`), and Português (`pt`).
+- **Timezone Selector**: Choose between UTC, US Eastern/Central/Pacific, Europe, Asia, or Local Browser timezone for live timestamp rendering.
+- **WCAG 2.1 AA Accessibility**: Skip-navigation links, ARIA tab semantics, keyboard arrow-key navigation, and high-contrast styling.
+
 ---
 
 ## Full Stack with Docker Compose

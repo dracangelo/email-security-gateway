@@ -30,6 +30,7 @@ class TenantManager:
         max_requests_per_minute: int = 500,
         vt_api_key: Optional[str] = None,
         gsb_api_key: Optional[str] = None,
+        timezone: str = "UTC",
     ) -> Tenant:
         """Onboard a new tenant."""
         if tenant_id in self._tenants:
@@ -45,6 +46,7 @@ class TenantManager:
             max_requests_per_minute=max_requests_per_minute,
             vt_api_key=vt_api_key,
             gsb_api_key=gsb_api_key,
+            timezone=timezone,
         )
         if encryption_key:
             tenant.encryption_key = encryption_key

@@ -5,8 +5,10 @@ Aggregates gateway telemetry, computes false-positive ratios, and provides full-
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime, timezone as dt_timezone
 import time
 from typing import Any, Dict, List, Optional
+import zoneinfo
 
 from delivery.quarantine import QuarantineRecord
 
@@ -99,3 +101,75 @@ class DashboardAnalyticsEngine:
     def get_realtime_threat_stream(self, records: List[Dict[str, Any]], min_score: int = 70) -> List[Dict[str, Any]]:
         """Extract high-severity threat events for real-time alert stream."""
         return self.search_audit_records(records, min_score=min_score)
+
+    @staticmethod
+    def format_timestamp_tz(
+        ts: float | int | datetime,
+        tz_name: str = "UTC",
+        fmt: str = "%Y-%m-%d %H:%M:%S %Z",
+    ) -> str:
+        """Convert a Unix epoch or datetime object into a formatted string in the specified timezone."""
+        try:
+            tz = zoneinfo.ZoneInfo(tz_name)
+        except Exception:
+            tz = zoneinfo.ZoneInfo("UTC")
+
+        if isinstance(ts, (int, float)):
+            dt = datetime.fromtimestamp(ts, tz=dt_timezone.utc)
+        elif isinstance(ts, datetime):
+            dt = ts if ts.tzinfo else ts.replace(tzinfo=dt_timezone.utc)
+        else:
+            return str(ts)
+
+        return dt.astimezone(tz).strftime(fmt)
+
+    def aggregate_metrics_by_timezone(
+        self,
+        records: List[Dict[str, Any]],
+        tz_name: str = "UTC",
+    ) -> Dict[str, Any]:
+        """
+        Group audit records by local date and hour according to the target timezone.
+        Enables timezone-aware incident trend reporting.
+        """
+        try:
+            tz = zoneinfo.ZoneInfo(tz_name)
+        except Exception:
+            tz = zoneinfo.ZoneInfo("UTC")
+
+        hourly_counter: Counter[str] = Counter()
+        daily_counter: Counter[str] = Counter()
+        severity_by_hour: Dict[str, Counter[str]] = {}
+
+        for rec in records:
+            ts_val = rec.get("timestamp") or rec.get("created_at") or time.time()
+            if isinstance(ts_val, (int, float)):
+                dt = datetime.fromtimestamp(ts_val, tz=dt_timezone.utc).astimezone(tz)
+            else:
+                dt = datetime.now(tz=tz)
+
+            hour_key = dt.strftime("%Y-%m-%d %H:00")
+            day_key = dt.strftime("%Y-%m-%d")
+
+            hourly_counter[hour_key] += 1
+            daily_counter[day_key] += 1
+
+            if hour_key not in severity_by_hour:
+                severity_by_hour[hour_key] = Counter()
+
+            score = rec.get("total_score") or rec.get("score") or 0
+            if score >= 70:
+                severity_by_hour[hour_key]["high"] += 1
+            elif score >= 30:
+                severity_by_hour[hour_key]["medium"] += 1
+            else:
+                severity_by_hour[hour_key]["low"] += 1
+
+        return {
+            "timezone": tz_name,
+            "generated_at": datetime.now(tz=tz).strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "daily_volume": dict(daily_counter),
+            "hourly_volume": dict(hourly_counter),
+            "severity_by_hour": {k: dict(v) for k, v in severity_by_hour.items()},
+        }
+

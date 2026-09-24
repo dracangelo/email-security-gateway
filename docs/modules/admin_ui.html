@@ -390,6 +390,7 @@
 <a href="../architecture.html" class="nav-item">Architecture Overview</a>
 <a href="../configuration.html" class="nav-item">Configuration Guide</a>
 <a href="../api_reference.html" class="nav-item">API Reference</a>
+<a href="../tenant_onboarding.html" class="nav-item">Tenant Onboarding</a>
 <a href="../environment_parity.html" class="nav-item">Environment Parity</a>
 <div class="nav-group-title">Gateway Modules (1/2)</div>
 <a href="../modules/auth_checker.html" class="nav-item">Authentication Checker</a>
@@ -421,6 +422,7 @@
 <div class="nav-group-title">Security & Governance</div>
 <a href="../security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
 <a href="../security/hardening.html" class="nav-item">Production Hardening</a>
+<a href="../detection_changelog.html" class="nav-item">Detection Logic Changelog</a>
 <div class="nav-group-title">Operations & Runbooks</div>
 <a href="../runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
 <a href="../runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
@@ -542,8 +544,33 @@ stats = await analytics.get_summary_metrics(tenant_id=&quot;tenant_finance&quot;
 <li><strong>Audited Review</strong>: Every release, rejection, or message inspection is permanently logged in the audit log with the analyst's identity and IP address.</li>
 </ul>
 <hr />
+<h2 id="internationalization-accessibility-task-20">Internationalization &amp; Accessibility (Task 20)</h2>
+<h3 id="multi-language-localization-i18npy">Multi-Language Localization (<code>i18n.py</code>)</h3>
+<p>The Admin UI supports dynamic client-side and server-side localization across 7 languages without requiring page reloads:
+- <strong>English (<code>en</code>)</strong>
+- <strong>Spanish / Español (<code>es</code>)</strong>
+- <strong>German / Deutsch (<code>de</code>)</strong>
+- <strong>French / Français (<code>fr</code>)</strong>
+- <strong>Japanese / 日本語 (<code>ja</code>)</strong>
+- <strong>Chinese / 中文 (<code>zh</code>)</strong>
+- <strong>Portuguese / Português (<code>pt</code>)</strong></p>
+<p>Analysts select their preferred language from the header selector. The selection is persisted in <code>localStorage</code> (<code>admin_ui_lang</code>) and dynamically translates all dashboard widgets, navigation tabs, table headers, action buttons, and modal dialogs.</p>
+<h3 id="timezone-aware-reporting-timestamps">Timezone-Aware Reporting &amp; Timestamps</h3>
+<p>Global SOC teams and multi-tenant deployments require timestamps presented in the operator's local or operational timezone:
+- <strong>Timezone Selection</strong>: Supports <code>UTC</code>, <code>America/New_York</code>, <code>America/Chicago</code>, <code>America/Los_Angeles</code>, <code>Europe/London</code>, <code>Europe/Berlin</code>, <code>Asia/Tokyo</code>, <code>Asia/Shanghai</code>, and <code>Local Browser Time</code>.
+- <strong>Dynamic Conversion</strong>: Epoch timestamps are rendered via <code>Intl.DateTimeFormat(locale, { timeZone: tz })</code>.
+- <strong>Timezone Metrics Aggregation</strong>: <code>DashboardAnalyticsEngine.aggregate_metrics_by_timezone(records, tz_name="America/New_York")</code> groups incident volumes into hourly and daily buckets in the tenant's configured timezone.
+- <strong>Tenant Timezone Binding</strong>: Each tenant organization stores its primary operational timezone in <code>Tenant.timezone</code>.</p>
+<h3 id="accessibility-wcag-21-aa-compliance">Accessibility (WCAG 2.1 AA Compliance)</h3>
+<ul>
+<li><strong>Skip Navigation</strong>: Keyboard and screen-reader accessible skip-link (<code>&lt;a href="#main-content" class="skip-link"&gt;Skip to main content&lt;/a&gt;</code>).</li>
+<li><strong>ARIA Semantics</strong>: Implements <code>role="tablist"</code>, <code>role="tab"</code>, <code>aria-selected</code>, <code>aria-controls</code>, <code>role="tabpanel"</code>, and <code>role="dialog"</code> with <code>aria-modal="true"</code>.</li>
+<li><strong>Keyboard Navigation</strong>: ArrowLeft/ArrowRight to switch tabs; Escape key to dismiss modals; visible focus rings (<code>:focus-visible</code>).</li>
+<li><strong>High Contrast</strong>: Meets WCAG 2.1 AAA contrast ratios across text, badges, and controls.</li>
+</ul>
+<hr />
 <h2 id="testing">Testing</h2>
-<pre><code class="language-bash">pytest tests/test_admin_ui.py -v
+<pre><code class="language-bash">pytest tests/test_admin_ui.py tests/test_i18n_and_accessibility.py -v
 </code></pre>
 
     <div class="doc-footer">

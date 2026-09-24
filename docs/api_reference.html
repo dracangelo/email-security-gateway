@@ -390,6 +390,7 @@
 <a href="./architecture.html" class="nav-item">Architecture Overview</a>
 <a href="./configuration.html" class="nav-item">Configuration Guide</a>
 <a href="./api_reference.html" class="nav-item active">API Reference</a>
+<a href="./tenant_onboarding.html" class="nav-item">Tenant Onboarding</a>
 <a href="./environment_parity.html" class="nav-item">Environment Parity</a>
 <div class="nav-group-title">Gateway Modules (1/2)</div>
 <a href="./modules/auth_checker.html" class="nav-item">Authentication Checker</a>
@@ -421,6 +422,7 @@
 <div class="nav-group-title">Security & Governance</div>
 <a href="./security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
 <a href="./security/hardening.html" class="nav-item">Production Hardening</a>
+<a href="./detection_changelog.html" class="nav-item">Detection Logic Changelog</a>
 <div class="nav-group-title">Operations & Runbooks</div>
 <a href="./runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
 <a href="./runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
@@ -446,6 +448,19 @@
 <li><strong>Inbound App</strong> (<code>/webhooks/*</code>, <code>/healthz</code>, <code>/readyz</code>) — public-facing, authenticated via shared secret</li>
 <li><strong>Admin App</strong> (<code>/admin/*</code>, <code>/ui/*</code>) — internal, authenticated via bearer token</li>
 </ul>
+<hr />
+<h2 id="openapi-specification-v100">OpenAPI Specification (v1.0.0)</h2>
+<p>A machine-readable, versioned OpenAPI 3.1.0 specification is published and maintained directly in the documentation:</p>
+<ul>
+<li><strong>JSON Format</strong>: <a href="file:///home/drac/Documents/coding/email-auth-gateway/docs/openapi.json"><code>docs/openapi.json</code></a></li>
+<li><strong>YAML Format</strong>: <a href="file:///home/drac/Documents/coding/email-auth-gateway/docs/openapi.yaml"><code>docs/openapi.yaml</code></a></li>
+<li><strong>Interactive Swagger UI</strong>: <code>http://localhost:8000/docs</code> (available when running the gateway)</li>
+<li><strong>Interactive ReDoc</strong>: <code>http://localhost:8000/redoc</code></li>
+</ul>
+<p>To export or refresh the OpenAPI spec after schema changes, execute:</p>
+<pre><code class="language-bash">python3 scripts/export_openapi.py
+</code></pre>
+<p>This spec can be imported directly into Postman, Insomnia, or code-generation tools (<code>openapi-generator</code>, <code>datamodel-code-generator</code>).</p>
 <hr />
 <h2 id="authentication">Authentication</h2>
 <h3 id="inbound-webhook-endpoints">Inbound Webhook Endpoints</h3>
@@ -640,9 +655,58 @@
 <h3 id="get-admintenantstenant_idquarantine"><code>GET /admin/tenants/{tenant_id}/quarantine</code></h3>
 <p>List quarantine items scoped to a specific tenant.</p>
 <hr />
-<h2 id="admin-dashboard-ui">Admin: Dashboard UI</h2>
-<h3 id="get-uidashboard"><code>GET /ui/dashboard</code></h3>
-<p>Returns the HTML admin dashboard (quarantine review, analytics, recent decisions). Requires <code>Authorization: Bearer</code> header or session cookie.</p>
+<h2 id="admin-dashboard-ui-soc-endpoints">Admin: Dashboard UI &amp; SOC Endpoints</h2>
+<h3 id="get-dashboard-or-get-adminui"><code>GET /dashboard</code> or <code>GET /admin/ui</code></h3>
+<p>Returns the responsive, single-page SOC dashboard HTML supporting quarantine queue management, real-time metrics, localized interfaces (7 languages), and timezone-aware formatting.</p>
+<h3 id="get-adminuiapianalytics"><code>GET /admin/ui/api/analytics</code></h3>
+<p>Returns aggregated dashboard metrics including 24-hour processed volume, pending quarantine counts, false positive percentages, and breakdown of threat detection vectors.</p>
+<p><strong>Response <code>200 OK</code>:</strong></p>
+<pre><code class="language-json">{
+  &quot;timestamp&quot;: 1727196000.0,
+  &quot;summary&quot;: {
+    &quot;total_quarantined&quot;: 1248,
+    &quot;pending_count&quot;: 14,
+    &quot;released_count&quot;: 25,
+    &quot;rejected_count&quot;: 8,
+    &quot;false_positive_rate_pct&quot;: 0.82
+  },
+  &quot;action_breakdown&quot;: {
+    &quot;quarantine&quot;: 14,
+    &quot;warn_and_strip&quot;: 45,
+    &quot;forward&quot;: 1189
+  },
+  &quot;top_blocked_senders&quot;: {
+    &quot;phish@evil-domain.com&quot;: 12,
+    &quot;billing@fake-bank.xyz&quot;: 8
+  }
+}
+</code></pre>
+<h3 id="get-adminuiapipreviewquarantine_id"><code>GET /admin/ui/api/preview/{quarantine_id}</code></h3>
+<p>Fetches sanitized, defanged HTML and text bodies for safe previewing in the SOC analyst browser without execution risks. Scripts, tracking beacons, and iframes are stripped.</p>
+<p><strong>Response <code>200 OK</code>:</strong></p>
+<pre><code class="language-json">{
+  &quot;quarantine_id&quot;: &quot;msg_abc123&quot;,
+  &quot;html&quot;: &quot;&lt;div&gt;Safe sanitized body content with [defanged] links...&lt;/div&gt;&quot;,
+  &quot;text&quot;: &quot;Safe sanitized plain text body...&quot;,
+  &quot;subject&quot;: &quot;Urgent Invoice Attached&quot;
+}
+</code></pre>
+<h3 id="post-adminuiapibulk-action"><code>POST /admin/ui/api/bulk-action</code></h3>
+<p>Applies bulk triage decisions across multiple quarantine items simultaneously.</p>
+<p><strong>Request Body (<code>application/json</code>):</strong></p>
+<pre><code class="language-json">{
+  &quot;action&quot;: &quot;release&quot;,
+  &quot;quarantine_ids&quot;: [&quot;msg_1&quot;, &quot;msg_2&quot;, &quot;msg_3&quot;],
+  &quot;note&quot;: &quot;Bulk release verified legitimate marketing campaign&quot;
+}
+</code></pre>
+<p><strong>Response <code>200 OK</code>:</strong></p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;action&quot;: &quot;release&quot;,
+  &quot;processed_count&quot;: 3
+}
+</code></pre>
 <hr />
 <h2 id="time-of-click-redirect">Time-of-Click Redirect</h2>
 <h3 id="get-tocredirect"><code>GET /toc/redirect</code></h3>

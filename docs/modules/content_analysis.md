@@ -65,7 +65,24 @@ Matches urgency phrases and Business Email Compromise patterns in the message bo
 
 Score delta: `+5` per low-confidence phrase up to `+30` for explicit BEC patterns.
 
-Multi-language keyword support is available for all EU languages, Simplified Chinese, Japanese, Arabic, and Russian via `multilang_keywords.py`.
+### Multi-Language Content Analysis (`multilang_keywords.py`)
+
+The scanner automatically identifies the message language using Unicode script detection (Hiragana/Katakana for Japanese, Cyrillic for Russian, CJK ideographs for Chinese) and stopword frequency scoring for Latin-script languages.
+
+| Language | Code | Scanned Attack Vectors |
+|---|---|---|
+| **English** | `en` | Wire transfer, payroll redirection, credential expiration, invoice fraud |
+| **German** | `de` | `dringende zahlung`, `rechnung überfällig`, `überweisung ausstehend`, `bankverbindung geändert` |
+| **French** | `fr` | `paiement urgent`, `facture impayée`, `virement en attente`, `changement de coordonnées bancaires` |
+| **Spanish** | `es` | `pago urgente`, `factura vencida`, `transferencia pendiente`, `cambio de cuenta bancaria` |
+| **Italian** | `it` | `pagamento urgente`, `fattura scaduta`, `bonifico in sospeso`, `modifica coordinate bancarie` |
+| **Portuguese** | `pt` | `pagamento urgente`, `fatura vencida`, `transferência pendente`, `alteração de dados bancários` |
+| **Dutch** | `nl` | `dringende betaling`, `factuur achterstallig`, `openstaande rekening`, `wijziging bankgegevens` |
+| **Japanese** | `ja` | `至急の支払い`, `請求書の未払い`, `振込のお願い`, `アカウントの停止`, `振込先変更` |
+| **Russian** | `ru` | `срочная оплата`, `просроченный счет`, `изменение банковских реквизитов`, `учетная запись заблокирована` |
+| **Chinese** | `zh` | `紧急付款`, `逾期账单`, `银行账户变更`, `账号已被冻结`, `请协助保密` |
+
+**Unicode & Diacritic Resilience**: All incoming text undergoes Unicode NFKC normalization and diacritic stripping (`unicodedata.normalize('NFKD')`), ensuring keywords match even when accents or umlauts are stripped by attackers to evade filters (e.g. `überweisung` matches `uberweisung`, `impayée` matches `impayee`).
 
 ### URL Extraction + Typosquat Detection
 

@@ -122,8 +122,41 @@ stats = await analytics.get_summary_metrics(tenant_id="tenant_finance", time_win
 
 ---
 
+## Internationalization & Accessibility (Task 20)
+
+### Multi-Language Localization (`i18n.py`)
+
+The Admin UI supports dynamic client-side and server-side localization across 7 languages without requiring page reloads:
+- **English (`en`)**
+- **Spanish / Español (`es`)**
+- **German / Deutsch (`de`)**
+- **French / Français (`fr`)**
+- **Japanese / 日本語 (`ja`)**
+- **Chinese / 中文 (`zh`)**
+- **Portuguese / Português (`pt`)**
+
+Analysts select their preferred language from the header selector. The selection is persisted in `localStorage` (`admin_ui_lang`) and dynamically translates all dashboard widgets, navigation tabs, table headers, action buttons, and modal dialogs.
+
+### Timezone-Aware Reporting & Timestamps
+
+Global SOC teams and multi-tenant deployments require timestamps presented in the operator's local or operational timezone:
+- **Timezone Selection**: Supports `UTC`, `America/New_York`, `America/Chicago`, `America/Los_Angeles`, `Europe/London`, `Europe/Berlin`, `Asia/Tokyo`, `Asia/Shanghai`, and `Local Browser Time`.
+- **Dynamic Conversion**: Epoch timestamps are rendered via `Intl.DateTimeFormat(locale, { timeZone: tz })`.
+- **Timezone Metrics Aggregation**: `DashboardAnalyticsEngine.aggregate_metrics_by_timezone(records, tz_name="America/New_York")` groups incident volumes into hourly and daily buckets in the tenant's configured timezone.
+- **Tenant Timezone Binding**: Each tenant organization stores its primary operational timezone in `Tenant.timezone`.
+
+### Accessibility (WCAG 2.1 AA Compliance)
+
+- **Skip Navigation**: Keyboard and screen-reader accessible skip-link (`<a href="#main-content" class="skip-link">Skip to main content</a>`).
+- **ARIA Semantics**: Implements `role="tablist"`, `role="tab"`, `aria-selected`, `aria-controls`, `role="tabpanel"`, and `role="dialog"` with `aria-modal="true"`.
+- **Keyboard Navigation**: ArrowLeft/ArrowRight to switch tabs; Escape key to dismiss modals; visible focus rings (`:focus-visible`).
+- **High Contrast**: Meets WCAG 2.1 AAA contrast ratios across text, badges, and controls.
+
+---
+
 ## Testing
 
 ```bash
-pytest tests/test_admin_ui.py -v
+pytest tests/test_admin_ui.py tests/test_i18n_and_accessibility.py -v
 ```
+

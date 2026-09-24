@@ -7,6 +7,23 @@ The gateway exposes two distinct FastAPI applications on the same process:
 
 ---
 
+## OpenAPI Specification (v1.0.0)
+
+A machine-readable, versioned OpenAPI 3.1.0 specification is published and maintained directly in the documentation:
+
+- **JSON Format**: [`docs/openapi.json`](file:///home/drac/Documents/coding/email-auth-gateway/docs/openapi.json)
+- **YAML Format**: [`docs/openapi.yaml`](file:///home/drac/Documents/coding/email-auth-gateway/docs/openapi.yaml)
+- **Interactive Swagger UI**: `http://localhost:8000/docs` (available when running the gateway)
+- **Interactive ReDoc**: `http://localhost:8000/redoc`
+
+To export or refresh the OpenAPI spec after schema changes, execute:
+```bash
+python3 scripts/export_openapi.py
+```
+This spec can be imported directly into Postman, Insomnia, or code-generation tools (`openapi-generator`, `datamodel-code-generator`).
+
+---
+
 ## Authentication
 
 ### Inbound Webhook Endpoints
@@ -242,11 +259,74 @@ List quarantine items scoped to a specific tenant.
 
 ---
 
-## Admin: Dashboard UI
+## Admin: Dashboard UI & SOC Endpoints
 
-### `GET /ui/dashboard`
+### `GET /dashboard` or `GET /admin/ui`
 
-Returns the HTML admin dashboard (quarantine review, analytics, recent decisions). Requires `Authorization: Bearer` header or session cookie.
+Returns the responsive, single-page SOC dashboard HTML supporting quarantine queue management, real-time metrics, localized interfaces (7 languages), and timezone-aware formatting.
+
+### `GET /admin/ui/api/analytics`
+
+Returns aggregated dashboard metrics including 24-hour processed volume, pending quarantine counts, false positive percentages, and breakdown of threat detection vectors.
+
+**Response `200 OK`:**
+```json
+{
+  "timestamp": 1727196000.0,
+  "summary": {
+    "total_quarantined": 1248,
+    "pending_count": 14,
+    "released_count": 25,
+    "rejected_count": 8,
+    "false_positive_rate_pct": 0.82
+  },
+  "action_breakdown": {
+    "quarantine": 14,
+    "warn_and_strip": 45,
+    "forward": 1189
+  },
+  "top_blocked_senders": {
+    "phish@evil-domain.com": 12,
+    "billing@fake-bank.xyz": 8
+  }
+}
+```
+
+### `GET /admin/ui/api/preview/{quarantine_id}`
+
+Fetches sanitized, defanged HTML and text bodies for safe previewing in the SOC analyst browser without execution risks. Scripts, tracking beacons, and iframes are stripped.
+
+**Response `200 OK`:**
+```json
+{
+  "quarantine_id": "msg_abc123",
+  "html": "<div>Safe sanitized body content with [defanged] links...</div>",
+  "text": "Safe sanitized plain text body...",
+  "subject": "Urgent Invoice Attached"
+}
+```
+
+### `POST /admin/ui/api/bulk-action`
+
+Applies bulk triage decisions across multiple quarantine items simultaneously.
+
+**Request Body (`application/json`):**
+```json
+{
+  "action": "release",
+  "quarantine_ids": ["msg_1", "msg_2", "msg_3"],
+  "note": "Bulk release verified legitimate marketing campaign"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+  "status": "success",
+  "action": "release",
+  "processed_count": 3
+}
+```
 
 ---
 

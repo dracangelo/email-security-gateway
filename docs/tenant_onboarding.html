@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting Started — email-auth-gateway — email-auth-gateway</title>
-  <meta name="description" content="Technical documentation for Getting Started — email-auth-gateway in email-auth-gateway" />
+  <title>New-Tenant Onboarding Guide — email-auth-gateway — email-auth-gateway</title>
+  <meta name="description" content="Technical documentation for New-Tenant Onboarding Guide — email-auth-gateway in email-auth-gateway" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -386,11 +386,11 @@
 <aside class="sidebar">
   <div class="nav-group-title">Getting Started & Core</div>
 <a href="./index.html" class="nav-item">Portal Dashboard</a>
-<a href="./getting_started.html" class="nav-item active">Getting Started</a>
+<a href="./getting_started.html" class="nav-item">Getting Started</a>
 <a href="./architecture.html" class="nav-item">Architecture Overview</a>
 <a href="./configuration.html" class="nav-item">Configuration Guide</a>
 <a href="./api_reference.html" class="nav-item">API Reference</a>
-<a href="./tenant_onboarding.html" class="nav-item">Tenant Onboarding</a>
+<a href="./tenant_onboarding.html" class="nav-item active">Tenant Onboarding</a>
 <a href="./environment_parity.html" class="nav-item">Environment Parity</a>
 <div class="nav-group-title">Gateway Modules (1/2)</div>
 <a href="./modules/auth_checker.html" class="nav-item">Authentication Checker</a>
@@ -439,235 +439,175 @@
       <span class="separator">/</span>
       <span class="current">Getting Started & Core</span>
       <span class="separator">/</span>
-      <span class="current">Getting Started — email-auth-gateway</span>
+      <span class="current">New-Tenant Onboarding Guide — email-auth-gateway</span>
     </div>
 
-    <h1 id="getting-started-email-auth-gateway">Getting Started — email-auth-gateway</h1>
-<h2 id="prerequisites">Prerequisites</h2>
-<table>
-<thead>
-<tr>
-<th>Requirement</th>
-<th>Minimum</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Python</td>
-<td>3.11+</td>
-<td>Uses <code>match</code>, walrus operator, <code>from __future__ import annotations</code></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>7.x</td>
-<td>Optional but required for multi-instance deployments</td>
-</tr>
-<tr>
-<td>ClamAV (<code>clamd</code>)</td>
-<td>Latest</td>
-<td>Optional; gateway fails open if unreachable</td>
-</tr>
-<tr>
-<td>Docker / Compose</td>
-<td>24+</td>
-<td>For local full-stack dev</td>
-</tr>
-</tbody>
-</table>
+    <h1 id="new-tenant-onboarding-guide-email-auth-gateway">New-Tenant Onboarding Guide — email-auth-gateway</h1>
+<p>This guide provides a comprehensive, step-by-step walkthrough for onboarding a new organization, subsidiary, or enterprise customer onto <code>email-auth-gateway</code>. </p>
+<p>The gateway supports true multi-tenancy: each tenant receives cryptographically isolated quarantine storage, per-tenant Fernet encryption keys, custom risk scoring thresholds, rate limits, and executive VIP impersonation lists.</p>
 <hr />
-<h2 id="quick-start-local-development">Quick Start (Local Development)</h2>
-<h3 id="1-clone-install">1. Clone &amp; install</h3>
-<pre><code class="language-bash">git clone https://github.com/your-org/email-auth-gateway.git
-cd email-auth-gateway
+<h2 id="onboarding-architecture">Onboarding Architecture</h2>
+<pre class="mermaid">graph TD
+    A[New Tenant Domain e.g., acme.com] --&gt; B[1. DNS &amp; Mail Routing Setup]
+    B --&gt; C[2. Provision Tenant in Gateway via Admin API]
+    C --&gt; D[3. Generate Per-Tenant Fernet Encryption Key]
+    D --&gt; E[4. Configure Inbound Provider Parse/Routes]
+    E --&gt; F[5. Set Tenant Policies &amp; VIP Lists]
+    F --&gt; G[6. Phase 1: Tag-Only Observation Mode]
+    G --&gt; H[7. Phase 2: Active Protection &amp; Quarantine Enforcement]
+</pre>
+<hr />
+<h2 id="prerequisites-checklist">Prerequisites Checklist</h2>
+<p>Before beginning onboarding, gather the following tenant information:</p>
+<ol>
+<li><strong>Primary and Alias Domains</strong>: All domains receiving mail (e.g., <code>acme.com</code>, <code>acmecorp.io</code>).</li>
+<li><strong>Inbound Mail Provider</strong>: The service handling the tenant's public MX records (SendGrid, Mailgun, AWS SES, Microsoft 365, or Google Workspace).</li>
+<li><strong>Downstream Relay / Destination Server</strong>: The internal mail server or cloud tenant where verified clean emails must be relayed (e.g., <code>smtp.office365.com</code> or <code>mail.internal.acme.com</code>).</li>
+<li><strong>Key Executive / VIP Names</strong>: CEO, CFO, and payroll administrators to protect against display-name spoofing.</li>
+<li><strong>SecOps Contact</strong>: Webhook or email endpoint for quarantine notifications.</li>
+</ol>
+<hr />
+<h2 id="step-1-generate-tenant-cryptographic-key">Step 1: Generate Tenant Cryptographic Key</h2>
+<p>Every tenant's quarantined messages and raw <code>.eml</code> files are encrypted at rest with a unique Fernet key. Generate this key in your secure terminal:</p>
+<pre><code class="language-bash">python3 -c &quot;from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())&quot;
+</code></pre>
+<p><em>Example Output:</em> <code>9h8Z6K1pX...=</code> (store this securely in HashiCorp Vault, AWS Secrets Manager, or GCP Secret Manager).</p>
+<hr />
+<h2 id="step-2-register-tenant-via-admin-api">Step 2: Register Tenant via Admin API</h2>
+<p>Call the gateway's <code>/admin/tenants</code> endpoint using your <code>ADMIN_SHARED_SECRET</code> bearer token:</p>
+<h3 id="http-request">HTTP Request</h3>
+<pre><code class="language-bash">curl -X POST https://email-security.example.com/admin/tenants \
+  -H &quot;Authorization: Bearer &lt;ADMIN_SHARED_SECRET&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;tenant_id&quot;: &quot;tenant_acme&quot;,
+    &quot;name&quot;: &quot;Acme Corporation&quot;,
+    &quot;domains&quot;: [&quot;acme.com&quot;, &quot;acmecorp.io&quot;],
+    &quot;encryption_key&quot;: &quot;&lt;TENANT_FERNET_KEY&gt;&quot;,
+    &quot;warn_threshold&quot;: 35,
+    &quot;quarantine_threshold&quot;: 70,
+    &quot;max_requests_per_minute&quot;: 600,
+    &quot;vt_api_key&quot;: &quot;&quot;,
+    &quot;gsb_api_key&quot;: &quot;&quot;
+  }'
+</code></pre>
+<h3 id="python-sdk-script-example">Python SDK / Script Example</h3>
+<pre><code class="language-python">from multi_tenancy import TenantManager, TenantIsolatedQuarantine
 
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+manager = TenantManager()
+tenant = manager.create_tenant(
+    tenant_id=&quot;tenant_acme&quot;,
+    name=&quot;Acme Corporation&quot;,
+    domains=[&quot;acme.com&quot;, &quot;acmecorp.io&quot;],
+    encryption_key=&quot;&lt;GENERATED_FERNET_KEY&gt;&quot;,
+    warn_threshold=35,
+    quarantine_threshold=70,
+    max_requests_per_minute=600,
+)
+print(f&quot;Tenant {tenant.tenant_id} onboarded successfully.&quot;)
 </code></pre>
-<h3 id="2-configure-environment">2. Configure environment</h3>
-<pre><code class="language-bash">cp .env.example .env
-</code></pre>
-<p>Edit <code>.env</code> and at minimum set:</p>
-<pre><code class="language-bash"># Required — generate a strong random secret:
-WEBHOOK_SHARED_SECRET=$(python3 -c &quot;import secrets; print(secrets.token_urlsafe(32))&quot;)
-
-# Required — generate a Fernet encryption key for stored mail:
-RAW_MAIL_ENCRYPTION_KEY=$(python3 -c &quot;from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())&quot;)
-
-# Optional — destination SMTP server (empty = dry-run mode, nothing sent)
-RELAY_HOST=localhost
-RELAY_PORT=1025
-</code></pre>
-<blockquote>
-<p><strong>Dry-run mode</strong>: If <code>RELAY_HOST</code> is empty, the gateway computes all decisions and stores quarantine items, but <code>FORWARD</code> and <code>WARN_AND_STRIP</code> messages are only logged — nothing is actually delivered. This is the safe way to observe decisions before trusting the gateway with live mail.</p>
-</blockquote>
-<h3 id="3-start-supporting-services">3. Start supporting services</h3>
-<pre><code class="language-bash"># Start Redis + ClamAV via Docker Compose:
-docker compose up -d redis clamav
-
-# Or start a local mail catcher (Mailpit) for SMTP relay testing:
-docker compose up -d mailpit
-</code></pre>
-<h3 id="4-start-the-gateway">4. Start the gateway</h3>
-<pre><code class="language-bash">uvicorn webhook_receiver.app:app --host 0.0.0.0 --port 8000 --reload
-</code></pre>
-<h3 id="5-send-a-test-message">5. Send a test message</h3>
-<pre><code class="language-bash">export WEBHOOK_SHARED_SECRET=&quot;&lt;your-secret-from-.env&gt;&quot;
-
-curl -X POST &quot;http://localhost:8000/webhooks/sendgrid/inbound/$WEBHOOK_SHARED_SECRET&quot; \
-  -F 'envelope={&quot;from&quot;:&quot;attacker@evil.com&quot;,&quot;to&quot;:[&quot;you@yourcompany.com&quot;]}' \
-  -F 'from=CEO Name &lt;ceo-impersonator@gmail.com&gt;' \
-  -F 'text=URGENT: Wire $50,000 immediately. Verify here: https://paypa1.com/login'
-</code></pre>
-<p>Expected response:</p>
+<hr />
+<h2 id="step-3-configure-inbound-mail-provider-routing">Step 3: Configure Inbound Mail Provider Routing</h2>
+<p>Configure the tenant's public mail flow to deliver inbound messages to the gateway.</p>
+<h3 id="option-a-sendgrid-inbound-parse">Option A: SendGrid Inbound Parse</h3>
+<ol>
+<li>Log in to <a href="https://app.sendgrid.com/settings/parse">SendGrid Inbound Parse Settings</a>.</li>
+<li>Click <strong>Add Host &amp; URL</strong>.</li>
+<li><strong>Host Name</strong>: <code>mail.acme.com</code> (point tenant's MX record to <code>mx.sendgrid.net</code>).</li>
+<li><strong>URL</strong>: <code>https://email-security.example.com/webhooks/sendgrid/inbound/&lt;WEBHOOK_SHARED_SECRET&gt;</code></li>
+<li>Check <strong>Check incoming emails for spam</strong> (optional) and select <strong>POST the raw, full MIME message</strong>.</li>
+</ol>
+<h3 id="option-b-mailgun-inbound-routes">Option B: Mailgun Inbound Routes</h3>
+<ol>
+<li>Go to <a href="https://app.mailgun.com/app/routes">Mailgun Routes</a>.</li>
+<li>Create a route matching the recipient domain:</li>
+<li><strong>Expression Filter</strong>: <code>match_recipient(".*@acme.com")</code></li>
+<li><strong>Action</strong>: <code>forward("https://email-security.example.com/webhooks/mailgun/inbound")</code></li>
+<li>Verify that <code>MAILGUN_SIGNING_KEY</code> is configured in your gateway <code>.env</code>.</li>
+</ol>
+<h3 id="option-c-microsoft-365-exchange-online">Option C: Microsoft 365 (Exchange Online)</h3>
+<ol>
+<li>In the Microsoft 365 Exchange Admin Center, navigate to <strong>Mail Flow &gt; Connectors</strong>.</li>
+<li>Create an <strong>Inbound Partner Connector</strong>:</li>
+<li>Sender domain: <code>*</code></li>
+<li>Restriction: Only accept mail from your gateway's outbound public IP addresses.</li>
+<li>Update tenant DNS MX records to route through the gateway or SendGrid/Mailgun edge.</li>
+</ol>
+<hr />
+<h2 id="step-4-configure-vip-protection-domain-watchlists">Step 4: Configure VIP Protection &amp; Domain Watchlists</h2>
+<p>Protect high-risk executives against business email compromise (BEC) and display name spoofing:</p>
+<ol>
+<li>Update the tenant's policy configuration:</li>
+</ol>
 <pre><code class="language-json">{
-  &quot;message_id&quot;: &quot;...&quot;,
-  &quot;action&quot;: &quot;quarantine&quot;,
-  &quot;score&quot;: 95,
-  &quot;reasons&quot;: [&quot;DMARC fail under p=reject&quot;, &quot;BEC urgency keyword match&quot;, &quot;typosquat domain paypa1.com&quot;]
+  &quot;vip_display_names&quot;: [
+    &quot;Alice Smith CEO&quot;,
+    &quot;Bob Jones CFO&quot;,
+    &quot;Carol White Controller&quot;
+  ],
+  &quot;watchlist_domains&quot;: [
+    &quot;acme.com&quot;,
+    &quot;acmecorp.io&quot;,
+    &quot;acme-supplier.com&quot;
+  ]
 }
 </code></pre>
-<h3 id="6-access-the-soc-admin-ui-dashboard">6. Access the SOC Admin UI Dashboard</h3>
-<p>Open your web browser and navigate to:</p>
-<pre><code>http://localhost:8000/dashboard
-</code></pre>
-<p>(or <code>http://localhost:8000/admin/ui</code>).</p>
-<p><strong>Dashboard Capabilities:</strong>
-- <strong>Real-Time Operational Telemetry</strong>: Displays 24-hour processed volume, pending quarantine counts, false positive rate (derived from analyst release actions), and high-risk threat detections.
-- <strong>Quarantine Review Queue</strong>: Search by sender, recipient, subject, or risk score; perform bulk releases or rejections.
-- <strong>Safe Sandboxed Email Preview</strong>: Click <strong>Preview</strong> on any quarantined item to view defanged plain-text and HTML safely stripped of scripts, tracking beacons, and active iframes.
-- <strong>Multi-Language Selector (7 Languages)</strong>: Toggle the interface between English (<code>en</code>), Español (<code>es</code>), Deutsch (<code>de</code>), Français (<code>fr</code>), 日本語 (<code>ja</code>), 中文 (<code>zh</code>), and Português (<code>pt</code>).
-- <strong>Timezone Selector</strong>: Choose between UTC, US Eastern/Central/Pacific, Europe, Asia, or Local Browser timezone for live timestamp rendering.
-- <strong>WCAG 2.1 AA Accessibility</strong>: Skip-navigation links, ARIA tab semantics, keyboard arrow-key navigation, and high-contrast styling.</p>
-<hr />
-<h2 id="full-stack-with-docker-compose">Full Stack with Docker Compose</h2>
-<pre><code class="language-bash">docker compose up --build
-</code></pre>
-<p>Services started:</p>
-<table>
-<thead>
-<tr>
-<th>Service</th>
-<th>Port</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>email-auth-gateway</code></td>
-<td>8000</td>
-<td>FastAPI gateway</td>
-</tr>
-<tr>
-<td><code>redis</code></td>
-<td>6379</td>
-<td>State / caching / rate limiting</td>
-</tr>
-<tr>
-<td><code>clamav</code></td>
-<td>3310</td>
-<td>Malware scanning daemon</td>
-</tr>
-<tr>
-<td><code>mailpit</code></td>
-<td>1025 / 8025</td>
-<td>SMTP trap + web UI for captured mail</td>
-</tr>
-</tbody>
-</table>
-<p>Gateway URL: <code>http://localhost:8000</code><br />
-Mailpit UI (captured delivered mail): <code>http://localhost:8025</code></p>
-<hr />
-<h2 id="running-tests">Running Tests</h2>
-<pre><code class="language-bash">python3 -m pytest tests/ -v
-</code></pre>
-<ul>
-<li><strong>165 tests</strong>, all offline/local.</li>
-<li>DNS and HTTP calls are mocked throughout.</li>
-<li>SMTP relay tests use a real local <code>aiosmtpd</code> server.</li>
-<li>Storage tests run identically against <code>InMemoryStore</code> and <code>RedisStore</code> (via <code>fakeredis</code>).</li>
-</ul>
-<p>Run only a specific module's tests:</p>
-<pre><code class="language-bash">python3 -m pytest tests/test_auth_checker.py -v
-python3 -m pytest tests/test_decision_engine.py -v
-</code></pre>
-<hr />
-<h2 id="configure-sendgrid-inbound-parse">Configure SendGrid Inbound Parse</h2>
 <ol>
-<li>In SendGrid, go to <strong>Settings → Inbound Parse → Add Host &amp; URL</strong>.</li>
-<li>Set the URL to:
-   <code>https://your-gateway-host/webhooks/sendgrid/inbound/&lt;WEBHOOK_SHARED_SECRET&gt;</code></li>
-<li>Enable <strong>"Post the raw, full MIME message"</strong> — without this, DKIM verification accuracy degrades (the gateway will warn at startup if only parsed fields arrive).</li>
+<li>Any email received with a sender display name matching <code>"Alice Smith"</code> originating from an external domain will receive a <strong>+40 BEC penalty</strong>, immediately pushing unauthorized messages into quarantine.</li>
 </ol>
-<p>See: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-up-the-inbound-parse-webhook</p>
 <hr />
-<h2 id="configure-other-providers">Configure Other Providers</h2>
-<table>
-<thead>
-<tr>
-<th>Provider</th>
-<th>Endpoint</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Mailgun</strong></td>
-<td><code>POST /webhooks/mailgun/inbound</code></td>
-<td>Uses Mailgun HMAC signature verification</td>
-</tr>
-<tr>
-<td><strong>AWS SES + SNS</strong></td>
-<td><code>POST /webhooks/ses/inbound</code></td>
-<td>SNS message signature verified before processing</td>
-</tr>
-<tr>
-<td><strong>Postmark</strong></td>
-<td><code>POST /webhooks/postmark/inbound</code></td>
-<td>Standard inbound webhook format</td>
-</tr>
-<tr>
-<td><strong>Microsoft 365</strong></td>
-<td><code>POST /webhooks/m365/inbound</code></td>
-<td>Graph API client credentials auth</td>
-</tr>
-<tr>
-<td><strong>Google Workspace</strong></td>
-<td><code>POST /webhooks/google/inbound</code></td>
-<td>Gmail API service account auth</td>
-</tr>
-</tbody>
-</table>
+<h2 id="step-5-staged-rollout-strategy">Step 5: Staged Rollout Strategy</h2>
+<p>To prevent disruptions or false-positive drops during onboarding, adhere to the three-phase cutover schedule:</p>
+<pre class="mermaid">timeline
+    title Tenant Cutover Timeline
+    Phase 1 : Days 1–3 : Tag-Only Observation Mode (ENABLE_TAG_ONLY_MODE=true) : Baseline normal traffic &amp; false positives
+    Phase 2 : Days 4–7 : Warn &amp; Strip Mode : Prefix subject with [SUSPICIOUS], defang URLs, strip suspicious attachments
+    Phase 3 : Day 8+ : Full Enforcement : Strict Quarantine (Score &gt;= 70) with Slack &amp; Digest Notifications
+</pre>
+<h3 id="phase-1-tag-only-observation-mode-days-13">Phase 1: Tag-Only Observation Mode (Days 1–3)</h3>
+<ul>
+<li>Set <code>ENABLE_TAG_ONLY_MODE=true</code> for the tenant.</li>
+<li>All messages are delivered to downstream mailboxes.</li>
+<li>The gateway appends diagnostic headers:
+  <code>http
+  X-Gateway-Verdict: PASS
+  X-Gateway-Score: 15
+  X-Gateway-Tenant: tenant_acme</code></li>
+<li>Review the SOC Dashboard at <code>/ui/</code> to review verdict distributions and adjust custom thresholds.</li>
+</ul>
+<h3 id="phase-2-warning-defanging-days-47">Phase 2: Warning &amp; Defanging (Days 4–7)</h3>
+<ul>
+<li>Enable <code>WARN_AND_STRIP</code> action.</li>
+<li>Suspicious links are defanged (<code>https://</code> becomes <code>hxxps://</code>).</li>
+<li>Users receive clear warning banners without missing legitimate emails.</li>
+</ul>
+<h3 id="phase-3-full-enforcement-day-8">Phase 3: Full Enforcement (Day 8+)</h3>
+<ul>
+<li>Enable active quarantine.</li>
+<li>Threats (score ≥ 70 or malware hits) are encrypted into <code>/quarantine/tenant_acme/</code> and held for review.</li>
+</ul>
 <hr />
-<h2 id="reviewing-quarantined-mail">Reviewing Quarantined Mail</h2>
-<pre><code class="language-bash">export ADMIN_SHARED_SECRET=&quot;&lt;your-admin-secret&gt;&quot;
+<h2 id="step-6-verification-end-to-end-testing">Step 6: Verification &amp; End-to-End Testing</h2>
+<p>Test tenant isolation and pipeline evaluation using the built-in test suite:</p>
+<pre><code class="language-bash"># Test inbound delivery for tenant domain
+curl -X POST https://email-security.example.com/webhooks/sendgrid/inbound/&lt;WEBHOOK_SHARED_SECRET&gt; \
+  -F &quot;from=Billing Department &lt;spoofed-vendor@malicious.com&gt;&quot; \
+  -F &quot;to=accounting@acme.com&quot; \
+  -F &quot;subject=URGENT: Outstanding Invoice Payment Required&quot; \
+  -F &quot;text=Please review the attached wire instructions immediately.&quot;
 
-# List all pending quarantine items
-curl http://localhost:8000/admin/quarantine \
-  -H &quot;Authorization: Bearer $ADMIN_SHARED_SECRET&quot;
-
-# Release a false positive (relays original, unmodified message)
-curl -X POST http://localhost:8000/admin/quarantine/&lt;id&gt;/release \
-  -H &quot;Authorization: Bearer $ADMIN_SHARED_SECRET&quot; \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;resolved_by&quot;:&quot;analyst@yourcompany.com&quot;,&quot;note&quot;:&quot;false positive - known vendor&quot;}'
-
-# Reject (keeps on disk, marks as reviewed)
-curl -X POST http://localhost:8000/admin/quarantine/&lt;id&gt;/reject \
-  -H &quot;Authorization: Bearer $ADMIN_SHARED_SECRET&quot; \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;resolved_by&quot;:&quot;analyst@yourcompany.com&quot;,&quot;note&quot;:&quot;confirmed phishing&quot;}'
+# Inspect quarantined item in tenant's isolated directory
+ls -lh /tmp/email-gateway-quarantine/tenant_acme/
 </code></pre>
 <hr />
-<h2 id="next-steps">Next Steps</h2>
-<ul>
-<li><a href="architecture.html">Architecture</a> — understand the full data flow and scoring model</li>
-<li><a href="configuration.html">Configuration Reference</a> — all environment variables and their defaults</li>
-<li><a href="api_reference.html">API Reference</a> — full REST API documentation</li>
-<li><a href="deployment/kubernetes.html">Deployment: Kubernetes</a> — production deployment guide</li>
-<li><a href="security/threat_model.html">Threat Model</a> — STRIDE analysis and residual risks</li>
-</ul>
+<h2 id="tenant-offboarding">Tenant Offboarding</h2>
+<p>When a tenant is decommissioned, execute the offboarding workflow:
+1. Re-point tenant MX records away from the gateway.
+2. Call the offboarding API:
+   <code>bash
+   curl -X DELETE https://email-security.example.com/admin/tenants/tenant_acme \
+     -H "Authorization: Bearer &lt;ADMIN_SHARED_SECRET&gt;"</code>
+3. Archive or purge the tenant's isolated quarantine directory according to your compliance data retention policy (e.g. 90-day retention).</p>
 
     <div class="doc-footer">
       <span>email-auth-gateway enterprise documentation suite</span>

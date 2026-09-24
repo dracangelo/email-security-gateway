@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting Started — email-auth-gateway — email-auth-gateway</title>
-  <meta name="description" content="Technical documentation for Getting Started — email-auth-gateway in email-auth-gateway" />
+  <title>Detection Logic & Scoring Matrix Changelog — email-auth-gateway</title>
+  <meta name="description" content="Technical documentation for Detection Logic & Scoring Matrix Changelog in email-auth-gateway" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -386,7 +386,7 @@
 <aside class="sidebar">
   <div class="nav-group-title">Getting Started & Core</div>
 <a href="./index.html" class="nav-item">Portal Dashboard</a>
-<a href="./getting_started.html" class="nav-item active">Getting Started</a>
+<a href="./getting_started.html" class="nav-item">Getting Started</a>
 <a href="./architecture.html" class="nav-item">Architecture Overview</a>
 <a href="./configuration.html" class="nav-item">Configuration Guide</a>
 <a href="./api_reference.html" class="nav-item">API Reference</a>
@@ -422,7 +422,7 @@
 <div class="nav-group-title">Security & Governance</div>
 <a href="./security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
 <a href="./security/hardening.html" class="nav-item">Production Hardening</a>
-<a href="./detection_changelog.html" class="nav-item">Detection Logic Changelog</a>
+<a href="./detection_changelog.html" class="nav-item active">Detection Logic Changelog</a>
 <div class="nav-group-title">Operations & Runbooks</div>
 <a href="./runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
 <a href="./runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
@@ -437,237 +437,268 @@
     <div class="breadcrumbs">
       <a href="./index.html">Docs</a>
       <span class="separator">/</span>
-      <span class="current">Getting Started & Core</span>
+      <span class="current">Security & Governance</span>
       <span class="separator">/</span>
-      <span class="current">Getting Started — email-auth-gateway</span>
+      <span class="current">Detection Logic & Scoring Matrix Changelog</span>
     </div>
 
-    <h1 id="getting-started-email-auth-gateway">Getting Started — email-auth-gateway</h1>
-<h2 id="prerequisites">Prerequisites</h2>
+    <h1 id="detection-logic-scoring-matrix-changelog">Detection Logic &amp; Scoring Matrix Changelog</h1>
+<p>This document tracks all changes, tuning iterations, weight calibrations, and architectural rationales for the detection rules in <code>email-auth-gateway</code>. </p>
+<p>Maintaining an audit-ready changelog for detection logic is a requirement for SOC 2 Type II (Common Criteria CC7.1, CC7.2), ISO 27001 (Control A.12.6), and GDPR Article 32 compliance, ensuring that rule modifications are deliberate, auditable, and traceable.</p>
+<hr />
+<h2 id="current-composite-scoring-architecture-v140">Current Composite Scoring Architecture (v1.4.0)</h2>
+<p>A message's composite risk score is evaluated as:
+$$\text{Total Risk Score} = \text{Score}<em>{\text{Auth}} + \text{Score}</em>{\text{Content}} + \text{Score}<em>{\text{Attachment}} + \text{Score}</em>{\text{Policy}}$$</p>
 <table>
 <thead>
 <tr>
-<th>Requirement</th>
-<th>Minimum</th>
-<th>Notes</th>
+<th>Score Range</th>
+<th>Action</th>
+<th>Pipeline Behavior</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Python</td>
-<td>3.11+</td>
-<td>Uses <code>match</code>, walrus operator, <code>from __future__ import annotations</code></td>
+<td><strong>0 – 29</strong></td>
+<td><code>FORWARD</code></td>
+<td>Relayed as-is to downstream mail server without modification.</td>
 </tr>
 <tr>
-<td>Redis</td>
-<td>7.x</td>
-<td>Optional but required for multi-instance deployments</td>
+<td><strong>30 – 69</strong></td>
+<td><code>WARN_AND_STRIP</code></td>
+<td>Subject tagged <code>[SUSPICIOUS]</code>, URLs defanged (<code>hxxps://</code>), attachments stripped, and warning banner injected.</td>
 </tr>
 <tr>
-<td>ClamAV (<code>clamd</code>)</td>
-<td>Latest</td>
-<td>Optional; gateway fails open if unreachable</td>
+<td><strong>70 – 100+</strong></td>
+<td><code>QUARANTINE</code></td>
+<td>Delivery aborted immediately; message encrypted at rest with Fernet key; SecOps notified via webhook.</td>
 </tr>
 <tr>
-<td>Docker / Compose</td>
-<td>24+</td>
-<td>For local full-stack dev</td>
+<td><strong>Single-Signal Override</strong></td>
+<td><code>QUARANTINE</code></td>
+<td>Any verified ClamAV or VirusTotal malware signature assigns <code>+100</code> points immediately, bypassing non-malware allowlists.</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="quick-start-local-development">Quick Start (Local Development)</h2>
-<h3 id="1-clone-install">1. Clone &amp; install</h3>
-<pre><code class="language-bash">git clone https://github.com/your-org/email-auth-gateway.git
-cd email-auth-gateway
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-</code></pre>
-<h3 id="2-configure-environment">2. Configure environment</h3>
-<pre><code class="language-bash">cp .env.example .env
-</code></pre>
-<p>Edit <code>.env</code> and at minimum set:</p>
-<pre><code class="language-bash"># Required — generate a strong random secret:
-WEBHOOK_SHARED_SECRET=$(python3 -c &quot;import secrets; print(secrets.token_urlsafe(32))&quot;)
-
-# Required — generate a Fernet encryption key for stored mail:
-RAW_MAIL_ENCRYPTION_KEY=$(python3 -c &quot;from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())&quot;)
-
-# Optional — destination SMTP server (empty = dry-run mode, nothing sent)
-RELAY_HOST=localhost
-RELAY_PORT=1025
-</code></pre>
-<blockquote>
-<p><strong>Dry-run mode</strong>: If <code>RELAY_HOST</code> is empty, the gateway computes all decisions and stores quarantine items, but <code>FORWARD</code> and <code>WARN_AND_STRIP</code> messages are only logged — nothing is actually delivered. This is the safe way to observe decisions before trusting the gateway with live mail.</p>
-</blockquote>
-<h3 id="3-start-supporting-services">3. Start supporting services</h3>
-<pre><code class="language-bash"># Start Redis + ClamAV via Docker Compose:
-docker compose up -d redis clamav
-
-# Or start a local mail catcher (Mailpit) for SMTP relay testing:
-docker compose up -d mailpit
-</code></pre>
-<h3 id="4-start-the-gateway">4. Start the gateway</h3>
-<pre><code class="language-bash">uvicorn webhook_receiver.app:app --host 0.0.0.0 --port 8000 --reload
-</code></pre>
-<h3 id="5-send-a-test-message">5. Send a test message</h3>
-<pre><code class="language-bash">export WEBHOOK_SHARED_SECRET=&quot;&lt;your-secret-from-.env&gt;&quot;
-
-curl -X POST &quot;http://localhost:8000/webhooks/sendgrid/inbound/$WEBHOOK_SHARED_SECRET&quot; \
-  -F 'envelope={&quot;from&quot;:&quot;attacker@evil.com&quot;,&quot;to&quot;:[&quot;you@yourcompany.com&quot;]}' \
-  -F 'from=CEO Name &lt;ceo-impersonator@gmail.com&gt;' \
-  -F 'text=URGENT: Wire $50,000 immediately. Verify here: https://paypa1.com/login'
-</code></pre>
-<p>Expected response:</p>
-<pre><code class="language-json">{
-  &quot;message_id&quot;: &quot;...&quot;,
-  &quot;action&quot;: &quot;quarantine&quot;,
-  &quot;score&quot;: 95,
-  &quot;reasons&quot;: [&quot;DMARC fail under p=reject&quot;, &quot;BEC urgency keyword match&quot;, &quot;typosquat domain paypa1.com&quot;]
-}
-</code></pre>
-<h3 id="6-access-the-soc-admin-ui-dashboard">6. Access the SOC Admin UI Dashboard</h3>
-<p>Open your web browser and navigate to:</p>
-<pre><code>http://localhost:8000/dashboard
-</code></pre>
-<p>(or <code>http://localhost:8000/admin/ui</code>).</p>
-<p><strong>Dashboard Capabilities:</strong>
-- <strong>Real-Time Operational Telemetry</strong>: Displays 24-hour processed volume, pending quarantine counts, false positive rate (derived from analyst release actions), and high-risk threat detections.
-- <strong>Quarantine Review Queue</strong>: Search by sender, recipient, subject, or risk score; perform bulk releases or rejections.
-- <strong>Safe Sandboxed Email Preview</strong>: Click <strong>Preview</strong> on any quarantined item to view defanged plain-text and HTML safely stripped of scripts, tracking beacons, and active iframes.
-- <strong>Multi-Language Selector (7 Languages)</strong>: Toggle the interface between English (<code>en</code>), Español (<code>es</code>), Deutsch (<code>de</code>), Français (<code>fr</code>), 日本語 (<code>ja</code>), 中文 (<code>zh</code>), and Português (<code>pt</code>).
-- <strong>Timezone Selector</strong>: Choose between UTC, US Eastern/Central/Pacific, Europe, Asia, or Local Browser timezone for live timestamp rendering.
-- <strong>WCAG 2.1 AA Accessibility</strong>: Skip-navigation links, ARIA tab semantics, keyboard arrow-key navigation, and high-contrast styling.</p>
-<hr />
-<h2 id="full-stack-with-docker-compose">Full Stack with Docker Compose</h2>
-<pre><code class="language-bash">docker compose up --build
-</code></pre>
-<p>Services started:</p>
+<h2 id="versioned-rule-history-rationale">Versioned Rule History &amp; Rationale</h2>
+<h3 id="version-140-security-regressions-evasion-defenses">Version 1.4.0 (Security Regressions &amp; Evasion Defenses)</h3>
+<p><em>Effective Date: 2026-09-15</em></p>
 <table>
 <thead>
 <tr>
-<th>Service</th>
-<th>Port</th>
+<th>Rule / Check</th>
+<th>Weight Delta</th>
+<th>Category</th>
+<th>Technical Rationale &amp; Tuning Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Quishing (QR Code Phishing)</strong></td>
+<td><code>+35</code></td>
+<td>Attachment / Content</td>
+<td>Detects QR codes inside image attachments and PDF payloads that encode phishing login URLs. Mitigates evasion of traditional text-based NLP scanners.</td>
+</tr>
+<tr>
+<td><strong>Polyglot File Detection</strong></td>
+<td><code>+50</code></td>
+<td>Attachment</td>
+<td>Identifies dual-format files (e.g., GIF89a headers wrapping PHP or JS payloads). Attackers exploit parser differentials where edge firewalls see an image, but endpoints execute code.</td>
+</tr>
+<tr>
+<td><strong>Zero-Width Character Keyword Evasion</strong></td>
+<td><code>+25</code></td>
+<td>Content</td>
+<td>Strips Unicode zero-width spaces (<code>\u200B</code>), soft hyphens (<code>\u00AD</code>), and zero-width joiners before running dictionary and urgency keyword matching. Prevents trivial bypass of keyword filters.</td>
+</tr>
+<tr>
+<td><strong>Hidden HTML / CSS Text Extraction</strong></td>
+<td><code>+25</code></td>
+<td>Content</td>
+<td>Scans for CSS properties hiding adversarial text (<code>display: none;</code>, <code>font-size: 0px;</code>, <code>color: transparent;</code>). Flags deliberate obfuscation attempts.</td>
+</tr>
+<tr>
+<td><strong>Double Extension Executable Masking</strong></td>
+<td><code>+40</code></td>
+<td>Attachment</td>
+<td>Detects patterns like <code>invoice.pdf.exe</code> or Right-to-Left Override (RLO <code>\u202E</code>) Unicode characters designed to deceive Windows/macOS file explorers.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="version-130-arc-protocol-indirect-mail-flows">Version 1.3.0 (ARC Protocol &amp; Indirect Mail Flows)</h3>
+<p><em>Effective Date: 2026-07-20</em></p>
+<table>
+<thead>
+<tr>
+<th>Rule / Check</th>
+<th>Weight Delta</th>
+<th>Category</th>
+<th>Technical Rationale &amp; Tuning Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Authenticated Received Chain (ARC) Mitigation</strong></td>
+<td><code>-20</code> to <code>-30</code></td>
+<td>Auth Checker</td>
+<td>Legitimate mailing lists (e.g., Google Groups, listservs) break upstream SPF and DKIM signatures by modifying headers and footers. If a verified ARC seal (<code>cv=pass</code>) from a trusted intermediary is present, authentication penalties are mitigated.</td>
+</tr>
+<tr>
+<td><strong>DMARC <code>p=quarantine</code> Alignment</strong></td>
+<td><code>+35</code></td>
+<td>Auth Checker</td>
+<td>Adjusted from <code>+40</code> to <code>+35</code> to avoid false-positive hard drops when combined with minor body keyword hits on legitimate marketing mail.</td>
+</tr>
+<tr>
+<td><strong>MTA-STS Policy Enforcement Failure</strong></td>
+<td><code>+20</code></td>
+<td>Auth Checker</td>
+<td>Added check for domains publishing <code>_mta-sts</code> TXT records in <code>enforce</code> mode where the connecting MTA failed TLS negotiation or valid certificate presentation.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="version-120-typosquatting-threat-intelligence-integration">Version 1.2.0 (Typosquatting &amp; Threat Intelligence Integration)</h3>
+<p><em>Effective Date: 2026-05-10</em></p>
+<table>
+<thead>
+<tr>
+<th>Rule / Check</th>
+<th>Weight Delta</th>
+<th>Category</th>
+<th>Technical Rationale &amp; Tuning Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Punycode / Homoglyph Detection</strong></td>
+<td><code>+35</code></td>
+<td>Content</td>
+<td>Replaces lookalike Cyrillic/Greek characters (e.g. <code>а</code> U+0430 for Latin <code>a</code> U+0061) and decodes <code>xn--</code> Punycode domains. Deters internationalized domain name (IDN) spoofing attacks.</td>
+</tr>
+<tr>
+<td><strong>Newly Registered Domain (NRD) Penalty</strong></td>
+<td><code>+30</code></td>
+<td>Content</td>
+<td>Lookups via RDAP: Domains registered &lt; 14 days ago receive <code>+30</code>; domains registered &lt; 30 days receive <code>+15</code>. Most phishing infrastructure is burned within 72 hours of registration.</td>
+</tr>
+<tr>
+<td><strong>VirusTotal High-Confidence Hit</strong></td>
+<td><code>+100</code></td>
+<td>Attachment / URL</td>
+<td>Single-signal quarantine trigger. If ≥ 3 antivirus engines on VirusTotal flag a URL or file hash, the message is quarantined unconditionally.</td>
+</tr>
+<tr>
+<td><strong>Google Safe Browsing Threat Hit</strong></td>
+<td><code>+100</code></td>
+<td>Content</td>
+<td>Single-signal quarantine trigger. URLs listed under <code>MALWARE</code>, <code>SOCIAL_ENGINEERING</code>, or <code>UNWANTED_SOFTWARE</code> immediately trigger quarantine.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="version-110-executive-vip-impersonation-multi-tenancy">Version 1.1.0 (Executive VIP Impersonation &amp; Multi-Tenancy)</h3>
+<p><em>Effective Date: 2026-03-01</em></p>
+<table>
+<thead>
+<tr>
+<th>Rule / Check</th>
+<th>Weight Delta</th>
+<th>Category</th>
+<th>Technical Rationale &amp; Tuning Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VIP Display-Name Spoofing</strong></td>
+<td><code>+40</code></td>
+<td>Decision / Policy</td>
+<td>Evaluates Levenshtein distance against configured executive names (e.g., "Jane Doe CEO"). If the display name matches a VIP but originates from a non-company external address, a high penalty is applied.</td>
+</tr>
+<tr>
+<td><strong>Forward-Confirmed Reverse DNS (FCrDNS)</strong></td>
+<td><code>+15</code></td>
+<td>Auth Checker</td>
+<td>Connect-time IP must resolve via PTR to a hostname that resolves back to the same IP. Reduces low-reputation zombie botnet senders.</td>
+</tr>
+<tr>
+<td><strong>Tenant Threshold Customization</strong></td>
+<td>Dynamic</td>
+<td>Decision Engine</td>
+<td>Enabled per-tenant override of <code>warn_threshold</code> and <code>quarantine_threshold</code> to accommodate varying risk tolerances between departments or enterprise subsidiaries.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="version-100-initial-unified-baseline">Version 1.0.0 (Initial Unified Baseline)</h3>
+<p><em>Effective Date: 2026-01-15</em></p>
+<table>
+<thead>
+<tr>
+<th>Rule / Check</th>
+<th>Default Weight</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>email-auth-gateway</code></td>
-<td>8000</td>
-<td>FastAPI gateway</td>
+<td><strong>SPF Hard Fail (<code>-all</code>)</strong></td>
+<td><code>+30</code></td>
+<td>Sender IP explicitly unauthorized by sender domain policy.</td>
 </tr>
 <tr>
-<td><code>redis</code></td>
-<td>6379</td>
-<td>State / caching / rate limiting</td>
+<td><strong>SPF Soft Fail (<code>~all</code>)</strong></td>
+<td><code>+15</code></td>
+<td>Sender IP not authorized, domain in transition.</td>
 </tr>
 <tr>
-<td><code>clamav</code></td>
-<td>3310</td>
-<td>Malware scanning daemon</td>
+<td><strong>DKIM Invalid Signature</strong></td>
+<td><code>+30</code></td>
+<td>Cryptographic signature present but failed verification.</td>
 </tr>
 <tr>
-<td><code>mailpit</code></td>
-<td>1025 / 8025</td>
-<td>SMTP trap + web UI for captured mail</td>
+<td><strong>DKIM Missing Signature</strong></td>
+<td><code>+15</code></td>
+<td>Message lacks DKIM cryptographic signing.</td>
+</tr>
+<tr>
+<td><strong>DMARC Fail under <code>p=reject</code></strong></td>
+<td><code>+50</code></td>
+<td>Domain explicitly requests rejection of unauthenticated mail.</td>
+</tr>
+<tr>
+<td><strong>DMARC Fail under <code>p=quarantine</code></strong></td>
+<td><code>+35</code></td>
+<td>Domain requests quarantine of unauthenticated mail.</td>
+</tr>
+<tr>
+<td><strong>DMARC Fail under <code>p=none</code></strong></td>
+<td><code>+10</code></td>
+<td>Domain reporting-only; slight indicator of authentication gap.</td>
+</tr>
+<tr>
+<td><strong>BEC Urgency &amp; Wire Transfer Keywords</strong></td>
+<td><code>+10</code> to <code>+30</code></td>
+<td>Phrases matching financial urgency, gift card requests, payroll account changes.</td>
+</tr>
+<tr>
+<td><strong>ClamAV Signature Hit</strong></td>
+<td><code>+100</code></td>
+<td>Local clamd daemon detected known malware payload.</td>
 </tr>
 </tbody>
 </table>
-<p>Gateway URL: <code>http://localhost:8000</code><br />
-Mailpit UI (captured delivered mail): <code>http://localhost:8025</code></p>
 <hr />
-<h2 id="running-tests">Running Tests</h2>
-<pre><code class="language-bash">python3 -m pytest tests/ -v
-</code></pre>
-<ul>
-<li><strong>165 tests</strong>, all offline/local.</li>
-<li>DNS and HTTP calls are mocked throughout.</li>
-<li>SMTP relay tests use a real local <code>aiosmtpd</code> server.</li>
-<li>Storage tests run identically against <code>InMemoryStore</code> and <code>RedisStore</code> (via <code>fakeredis</code>).</li>
-</ul>
-<p>Run only a specific module's tests:</p>
-<pre><code class="language-bash">python3 -m pytest tests/test_auth_checker.py -v
-python3 -m pytest tests/test_decision_engine.py -v
-</code></pre>
-<hr />
-<h2 id="configure-sendgrid-inbound-parse">Configure SendGrid Inbound Parse</h2>
+<h2 id="rule-governance-modification-process">Rule Governance &amp; Modification Process</h2>
+<p>To update, tune, or add a scoring rule:</p>
 <ol>
-<li>In SendGrid, go to <strong>Settings → Inbound Parse → Add Host &amp; URL</strong>.</li>
-<li>Set the URL to:
-   <code>https://your-gateway-host/webhooks/sendgrid/inbound/&lt;WEBHOOK_SHARED_SECRET&gt;</code></li>
-<li>Enable <strong>"Post the raw, full MIME message"</strong> — without this, DKIM verification accuracy degrades (the gateway will warn at startup if only parsed fields arrive).</li>
+<li><strong>RFC &amp; Threat Analysis</strong>: Submit a pull request modifying the scoring rule in <code>decision_engine/</code> or the corresponding analysis stage. Document the rationale, target CVE / attack technique, and expected false-positive rate.</li>
+<li><strong>Shadow / Tag-Only Validation</strong>: Deploy to staging or enable shadow evaluation (<code>ShadowModeEngine</code>) against a minimum of 10,000 real-world emails to calculate accuracy and false-positive deltas.</li>
+<li><strong>Changelog Entry</strong>: Update this file (<code>docs/detection_changelog.md</code>) detailing the version, weight delta, and justification.</li>
+<li><strong>Security Officer Approval</strong>: The SecOps Lead reviews the changelog entry and metrics before merging to <code>main</code>.</li>
 </ol>
-<p>See: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-up-the-inbound-parse-webhook</p>
-<hr />
-<h2 id="configure-other-providers">Configure Other Providers</h2>
-<table>
-<thead>
-<tr>
-<th>Provider</th>
-<th>Endpoint</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Mailgun</strong></td>
-<td><code>POST /webhooks/mailgun/inbound</code></td>
-<td>Uses Mailgun HMAC signature verification</td>
-</tr>
-<tr>
-<td><strong>AWS SES + SNS</strong></td>
-<td><code>POST /webhooks/ses/inbound</code></td>
-<td>SNS message signature verified before processing</td>
-</tr>
-<tr>
-<td><strong>Postmark</strong></td>
-<td><code>POST /webhooks/postmark/inbound</code></td>
-<td>Standard inbound webhook format</td>
-</tr>
-<tr>
-<td><strong>Microsoft 365</strong></td>
-<td><code>POST /webhooks/m365/inbound</code></td>
-<td>Graph API client credentials auth</td>
-</tr>
-<tr>
-<td><strong>Google Workspace</strong></td>
-<td><code>POST /webhooks/google/inbound</code></td>
-<td>Gmail API service account auth</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="reviewing-quarantined-mail">Reviewing Quarantined Mail</h2>
-<pre><code class="language-bash">export ADMIN_SHARED_SECRET=&quot;&lt;your-admin-secret&gt;&quot;
-
-# List all pending quarantine items
-curl http://localhost:8000/admin/quarantine \
-  -H &quot;Authorization: Bearer $ADMIN_SHARED_SECRET&quot;
-
-# Release a false positive (relays original, unmodified message)
-curl -X POST http://localhost:8000/admin/quarantine/&lt;id&gt;/release \
-  -H &quot;Authorization: Bearer $ADMIN_SHARED_SECRET&quot; \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;resolved_by&quot;:&quot;analyst@yourcompany.com&quot;,&quot;note&quot;:&quot;false positive - known vendor&quot;}'
-
-# Reject (keeps on disk, marks as reviewed)
-curl -X POST http://localhost:8000/admin/quarantine/&lt;id&gt;/reject \
-  -H &quot;Authorization: Bearer $ADMIN_SHARED_SECRET&quot; \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;resolved_by&quot;:&quot;analyst@yourcompany.com&quot;,&quot;note&quot;:&quot;confirmed phishing&quot;}'
-</code></pre>
-<hr />
-<h2 id="next-steps">Next Steps</h2>
-<ul>
-<li><a href="architecture.html">Architecture</a> — understand the full data flow and scoring model</li>
-<li><a href="configuration.html">Configuration Reference</a> — all environment variables and their defaults</li>
-<li><a href="api_reference.html">API Reference</a> — full REST API documentation</li>
-<li><a href="deployment/kubernetes.html">Deployment: Kubernetes</a> — production deployment guide</li>
-<li><a href="security/threat_model.html">Threat Model</a> — STRIDE analysis and residual risks</li>
-</ul>
 
     <div class="doc-footer">
       <span>email-auth-gateway enterprise documentation suite</span>

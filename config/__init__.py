@@ -10,7 +10,9 @@ Reads from environment variables and, optionally, a `.env` file (see
 """
 from __future__ import annotations
 
-from pydantic import Field, field_validator
+import os
+
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +35,7 @@ class Settings(BaseSettings):
     # ranges change over time, so this is opt-in rather than hardcoded --
     # keep it current from your provider's docs if you turn it on.
     webhook_allowed_source_ips: list[str] = Field(default_factory=list)
+    mailgun_signing_key: str = Field(default="", validation_alias=AliasChoices("mailgun_signing_key", "MAILGUN_SIGNING_KEY"))
 
     # --- Resource limits (DoS protection) -----------------------------------
     max_message_size_bytes: int = Field(default=25 * 1024 * 1024, description="Reject inbound payloads larger than this")
@@ -68,7 +71,10 @@ class Settings(BaseSettings):
     # only. These files routinely contain credentials, PII, and internal
     # infrastructure detail (from the phishing content itself, if nothing
     # else); encrypt at rest for anything real.
-    raw_mail_encryption_key: str = Field(default="")
+    raw_mail_encryption_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("raw_mail_encryption_key", "RAW_MAIL_ENCRYPTION_KEY", "encryption_key", "ENCRYPTION_KEY"),
+    )
 
     audit_log_path: str = Field(default="/tmp/email-gateway-audit.jsonl")
     admin_audit_log_path: str = Field(default="/tmp/email-gateway-admin-audit.jsonl")
@@ -77,12 +83,29 @@ class Settings(BaseSettings):
     # Empty relay_host = "dry run" mode: forward/warn_and_strip are decided
     # but never actually sent anywhere. Quarantine works either way (it
     # never needed a relay to begin with).
-    relay_host: str = Field(default="", description="Destination SMTP server -- empty disables actual relaying")
-    relay_port: int = Field(default=25)
-    relay_use_tls: bool = Field(default=False, description="Implicit TLS from connect (SMTPS, typically port 465)")
+    relay_host: str = Field(
+        default="",
+        validation_alias=AliasChoices("relay_host", "RELAY_HOST", "smtp_host", "SMTP_HOST"),
+        description="Destination SMTP server -- empty disables actual relaying",
+    )
+    relay_port: int = Field(
+        default=25,
+        validation_alias=AliasChoices("relay_port", "RELAY_PORT", "smtp_port", "SMTP_PORT"),
+    )
+    relay_use_tls: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("relay_use_tls", "RELAY_USE_TLS", "smtp_use_tls", "SMTP_USE_TLS"),
+        description="Implicit TLS from connect (SMTPS, typically port 465)",
+    )
     relay_start_tls: bool = Field(default=True, description="STARTTLS after connecting on a plaintext port")
-    relay_username: str = Field(default="")
-    relay_password: str = Field(default="")
+    relay_username: str = Field(
+        default="",
+        validation_alias=AliasChoices("relay_username", "RELAY_USERNAME", "smtp_user", "SMTP_USER"),
+    )
+    relay_password: str = Field(
+        default="",
+        validation_alias=AliasChoices("relay_password", "RELAY_PASSWORD", "smtp_pass", "SMTP_PASS"),
+    )
     enable_tag_only_mode: bool = Field(default=False, description="True = insert X-Gateway-Verdict headers instead of modifying/quarantining")
 
     quarantine_dir: str = Field(default="/tmp/email-gateway-quarantine")
@@ -105,13 +128,54 @@ class Settings(BaseSettings):
     # --- Content analysis ------------------------------------------------------
     watchlist_domains: list[str] = Field(default_factory=list)
     vip_display_names: list[str] = Field(default_factory=list, description="Protected executive display names to monitor for spoofing")
-    vt_api_key: str = Field(default="")
-    gsb_api_key: str = Field(default="")
-    clamd_host: str = Field(default="", description="Empty disables ClamAV scanning")
-    clamd_port: int = Field(default=3310)
+    vt_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("vt_api_key", "VT_API_KEY", "virustotal_api_key", "VIRUSTOTAL_API_KEY"),
+    )
+    gsb_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("gsb_api_key", "GSB_API_KEY", "safe_browsing_api_key", "SAFE_BROWSING_API_KEY"),
+    )
+    clamd_host: str = Field(
+        default="",
+        validation_alias=AliasChoices("clamd_host", "CLAMD_HOST", "clamav_host", "CLAMAV_HOST"),
+        description="Empty disables ClamAV scanning",
+    )
+    clamd_port: int = Field(
+        default=3310,
+        validation_alias=AliasChoices("clamd_port", "CLAMD_PORT", "clamav_port", "CLAMAV_PORT"),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_aliases_if_empty(cls, data):
+        if isinstance(data, dict):
+            pairs = [
+                ("vt_api_key", ["virustotal_api_key", "VIRUSTOTAL_API_KEY", "VT_API_KEY"]),
+                ("gsb_api_key", ["safe_browsing_api_key", "SAFE_BROWSING_API_KEY", "GSB_API_KEY"]),
+                ("clamd_host", ["clamav_host", "CLAMAV_HOST", "CLAMD_HOST"]),
+                ("raw_mail_encryption_key", ["encryption_key", "ENCRYPTION_KEY", "RAW_MAIL_ENCRYPTION_KEY"]),
+                ("relay_host", ["smtp_host", "SMTP_HOST", "RELAY_HOST"]),
+                ("relay_port", ["smtp_port", "SMTP_PORT", "RELAY_PORT"]),
+                ("relay_username", ["smtp_user", "SMTP_USER", "RELAY_USERNAME"]),
+                ("relay_password", ["smtp_pass", "SMTP_PASS", "RELAY_PASSWORD"]),
+            ]
+            for target, aliases in pairs:
+                curr = data.get(target)
+                if not curr:
+                    for a in aliases:
+                        val = (
+                            data.get(a)
+                            or os.environ.get(a)
+                            or os.environ.get(a.upper())
+                            or os.environ.get(a.lower())
+                        )
+                        if val:
+                            data[target] = val
+                            break
+        return data
 
     @field_validator("webhook_allowed_source_ips", "watchlist_domains", "vip_display_names", mode="before")
-
     @classmethod
     def _split_csv(cls, v):
         if isinstance(v, str):

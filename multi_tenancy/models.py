@@ -24,6 +24,7 @@ class Tenant:
     gsb_api_key: Optional[str] = None
     relay_host: Optional[str] = None
     max_requests_per_minute: int = 500
+    timezone: str = "UTC"
     created_at: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -44,5 +45,6 @@ class Tenant:
             gsb_api_key=data.get("gsb_api_key"),
             relay_host=data.get("relay_host"),
             max_requests_per_minute=data.get("max_requests_per_minute", 500),
+            timezone=data.get("timezone", "UTC"),
             created_at=data.get("created_at", time.time()),
         )

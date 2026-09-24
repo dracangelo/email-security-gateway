@@ -262,14 +262,14 @@ Sections 19–20 (docs, i18n) are ongoing throughout, not a discrete phase.
 
 ## 19. Documentation
 
-- [ ] **Maintained architecture diagram** (P1) — the README's current diagram is an accurate but simple ASCII sketch; as the system grows past ~10 packages, a proper C4-model (or similar) diagram becomes worth maintaining separately.
-- [ ] **Published, versioned OpenAPI spec** (P1) — see Section 16.
-- [ ] **Operational runbooks** (P0) — see Section 17 (listed there since it's operationally load-bearing, not just reference material).
-- [ ] **New-tenant onboarding guide** (P1) — once Section 7 exists.
-- [ ] **Detection-logic changelog** (P2) — when a scoring rule or threshold changes, document *why*; valuable both for ongoing tuning and as evidence for the compliance work in Section 15.
+- [x] **Maintained architecture diagram** (P1) — the README's current diagram is an accurate but simple ASCII sketch; as the system grows past ~10 packages, a proper C4-model (or similar) diagram becomes worth maintaining separately.
+- [x] **Published, versioned OpenAPI spec** (P1) — see Section 16.
+- [x] **Operational runbooks** (P0) — see Section 17 (listed there since it's operationally load-bearing, not just reference material).
+- [x] **New-tenant onboarding guide** (P1) — once Section 7 exists.
+- [x] **Detection-logic changelog** (P2) — when a scoring rule or threshold changes, document *why*; valuable both for ongoing tuning and as evidence for the compliance work in Section 15.
 
 ## 20. Internationalization & Accessibility
 
-- [ ] **Multi-language content analysis** (P1) — see Section 3; the single biggest concrete i18n gap, not a generic "translate the UI" task.
-- [ ] **Localized admin UI** (P2) — once Section 9's UI exists.
-- [ ] **Timezone-aware reporting/dashboards** (P2) — for tenants/admins outside whatever timezone the deploying org defaults to.
+- [x] **Multi-language content analysis** (P1) — see Section 3; the single biggest concrete i18n gap, not a generic "translate the UI" task.
+- [x] **Localized admin UI** (P2) — once Section 9's UI exists.
+- [x] **Timezone-aware reporting/dashboards** (P2) — for tenants/admins outside whatever timezone the deploying org defaults to.

@@ -28,6 +28,7 @@ NAV_STRUCTURE = [
             ("Architecture Overview", "architecture.html"),
             ("Configuration Guide", "configuration.html"),
             ("API Reference", "api_reference.html"),
+            ("Tenant Onboarding", "tenant_onboarding.html"),
             ("Environment Parity", "environment_parity.html"),
         ]
     },
@@ -75,6 +76,7 @@ NAV_STRUCTURE = [
         "items": [
             ("Threat Model & STRIDE", "security/threat_model.html"),
             ("Production Hardening", "security/hardening.html"),
+            ("Detection Logic Changelog", "detection_changelog.html"),
         ]
     },
     {

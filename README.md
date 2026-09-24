@@ -35,6 +35,7 @@ Supporting infrastructure used throughout:
 The project includes an enterprise-grade documentation suite with both an **Interactive Single Page Application (SPA) Portal** and standalone **Markdown (`.md`) & Static HTML (`.html`) Guides** for every subsystem:
 
 - 🛡️ **[Interactive Documentation Portal](docs/index.html)** — Comprehensive single-page docs app with instant search, dark mode theme, interactive diagrams, and live syntax highlighting.
+- 🖥️ **[SOC Admin Web UI](docs/modules/admin_ui.html)** ([MD](docs/modules/admin_ui.md)) — Responsive Single Page Application (SPA) at `/dashboard` or `/admin/ui` for real-time threat analytics, sanitized email previewing, quarantine queue management, multi-language i18n (7 languages), and timezone conversion.
 - ⚡ **[Getting Started Guide](docs/getting_started.html)** ([Markdown](docs/getting_started.md)) — Prerequisites, installation, and first message verification.
 - 🏗️ **[Architecture Deep-Dive](docs/architecture.html)** ([Markdown](docs/architecture.md)) — End-to-end pipeline diagrams, state machine, and data flow.
 - ⚙️ **[Configuration Reference](docs/configuration.html)** ([Markdown](docs/configuration.md)) — Full environment variable reference and sensible defaults.
@@ -159,6 +160,12 @@ existence, they're behind a normal auth boundary an operator expects).
   unset, forward/warn_and_strip run in **dry-run mode**: fully decided
   and logged, nothing actually sent -- lets you stand this up and watch
   its decisions before trusting it to move mail.
+
+### `admin_ui/` (new -- web dashboard for SOC & quarantine operations)
+- `ui_app.py` -- serves the responsive Single Page Application (SPA) at `/dashboard` or `/admin/ui`.
+- `dashboard_analytics.py` -- calculates 24-hour processed volume, false-positive ratios from release actions, top attacked recipients, threat category distributions, and timezone-aware metric aggregation.
+- `sanitizer.py` -- `SafeEmailPreviewRenderer` strips executable scripts, iframes, tracking pixels, and active HTML payloads for safe analyst message previewing.
+- `i18n.py` -- full multi-language localization supporting 7 languages (English, Spanish, German, French, Japanese, Chinese, Portuguese), client-side locale switching, timezone conversion (UTC, America/New_York, Europe/Berlin, Asia/Tokyo, Local), and WCAG 2.1 AA accessibility.
 
 ## Run it
 

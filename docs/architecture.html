@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Architecture — email-auth-gateway — email-auth-gateway</title>
-  <meta name="description" content="Technical documentation for Architecture — email-auth-gateway in email-auth-gateway" />
+  <title>Architecture & C4 Model — email-auth-gateway — email-auth-gateway</title>
+  <meta name="description" content="Technical documentation for Architecture & C4 Model — email-auth-gateway in email-auth-gateway" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -390,6 +390,7 @@
 <a href="./architecture.html" class="nav-item active">Architecture Overview</a>
 <a href="./configuration.html" class="nav-item">Configuration Guide</a>
 <a href="./api_reference.html" class="nav-item">API Reference</a>
+<a href="./tenant_onboarding.html" class="nav-item">Tenant Onboarding</a>
 <a href="./environment_parity.html" class="nav-item">Environment Parity</a>
 <div class="nav-group-title">Gateway Modules (1/2)</div>
 <a href="./modules/auth_checker.html" class="nav-item">Authentication Checker</a>
@@ -421,6 +422,7 @@
 <div class="nav-group-title">Security & Governance</div>
 <a href="./security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
 <a href="./security/hardening.html" class="nav-item">Production Hardening</a>
+<a href="./detection_changelog.html" class="nav-item">Detection Logic Changelog</a>
 <div class="nav-group-title">Operations & Runbooks</div>
 <a href="./runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
 <a href="./runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
@@ -437,358 +439,209 @@
       <span class="separator">/</span>
       <span class="current">Getting Started & Core</span>
       <span class="separator">/</span>
-      <span class="current">Architecture — email-auth-gateway</span>
+      <span class="current">Architecture & C4 Model — email-auth-gateway</span>
     </div>
 
-    <h1 id="architecture-email-auth-gateway">Architecture — email-auth-gateway</h1>
-<h2 id="overview">Overview</h2>
-<p><code>email-auth-gateway</code> is an enterprise-grade, multi-tenant email security gateway. It sits between inbound mail providers (SendGrid, Mailgun, AWS SES, M365, Google Workspace) and your internal infrastructure, inspecting every message across three parallel analysis stages before deciding whether to forward, warn-and-strip, or quarantine it.</p>
+    <h1 id="architecture-c4-model-email-auth-gateway">Architecture &amp; C4 Model — email-auth-gateway</h1>
+<h2 id="system-overview">System Overview</h2>
+<p><code>email-auth-gateway</code> is an enterprise-grade, multi-tenant email security gateway. Positioned between public inbound mail providers (SendGrid, Mailgun, AWS SES, Microsoft 365, Google Workspace) and internal mail infrastructure, it performs asynchronous, defense-in-depth analysis across three parallel evaluation stages before deciding whether to forward, warn-and-strip, or quarantine incoming messages.</p>
 <hr />
-<h2 id="high-level-data-flow">High-Level Data Flow</h2>
-<pre><code>┌─────────────────────────────────────────────────────┐
-│         Public Inbound Providers                    │
-│  SendGrid · Mailgun · AWS SES · M365 · GWorkspace  │
-└───────────────────┬─────────────────────────────────┘
-                    │ HTTPS webhook / SMTP
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│              Security / Ingress Layer               │
-│  Webhook Auth · IP Allowlist · Rate Limit · Size   │
-│  Bounce Detection · Idempotency (Redis dedup)      │
-└───────────────────┬─────────────────────────────────┘
-                    │ Raw MIME bytes
-                    ▼
-        ┌───────────┴───────────┐
-        │                       │
-        ▼                       ▼
-┌───────────────┐   ┌───────────────────────────┐
-│ auth_checker/ │   │   content_analysis/       │
-│ SPF · DKIM   │   │ Keywords · URLs · Typosquat│
-│ DMARC · ARC  │   │ Homoglyphs · Evasion · OCR│
-│ BIMI · FCrDNS│   │ Reputation · Domain Age   │
-└──────┬────────┘   └────────────┬──────────────┘
-       │                         │
-       │            ┌────────────┘
-       │            │
-       ▼            ▼
-┌────────────────────────────────┐
-│     attachment_analysis/       │
-│  Extract · Extensions · Hashes │
-│  VirusTotal · ClamAV · Sandbox │
-└────────────────┬───────────────┘
-                 │  stage scores (score_delta + reasons)
-                 ▼
-┌─────────────────────────────────────────────────────┐
-│              decision_engine/                       │
-│  Score Aggregation · Per-Tenant Config              │
-│  VIP Policy · Campaign Clustering · Allow/Block    │
-│  Feedback Loop · Shadow Mode · Explainability      │
-└───────────────────┬─────────────────────────────────┘
-                    │  Action: FORWARD / WARN_AND_STRIP / QUARANTINE
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│                  delivery/                          │
-│  forward → relay as-is                             │
-│  warn_and_strip → modify + relay                   │
-│  quarantine → encrypt + store + notify             │
-└───────────────────┬─────────────────────────────────┘
-                    │
-        ┌───────────┴───────────┐
-        ▼                       ▼
-┌──────────────┐       ┌────────────────┐
-│   audit/     │       │  observability/│
-│ JSONL trail  │       │ Prometheus     │
-│ Admin log    │       │ OpenTelemetry  │
-└──────────────┘       └────────────────┘
-</code></pre>
-<hr />
-<h2 id="module-responsibilities">Module Responsibilities</h2>
-<table>
-<thead>
-<tr>
-<th>Module</th>
-<th>Role</th>
-<th>Key Files</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>webhook_receiver/</code></td>
-<td>FastAPI application, request parsing, orchestration</td>
-<td><code>app.py</code>, <code>parsers/</code></td>
-</tr>
-<tr>
-<td><code>security/</code></td>
-<td>Auth, rate limiting, encryption, redaction</td>
-<td><code>webhook_auth.py</code>, <code>rate_limit.py</code>, <code>encryption.py</code>, <code>redact.py</code></td>
-</tr>
-<tr>
-<td><code>auth_checker/</code></td>
-<td>SPF, DKIM, DMARC, ARC, BIMI, FCrDNS, MTA-STS</td>
-<td><code>pipeline.py</code>, <code>spf.py</code>, <code>dkim_check.py</code>, <code>dmarc.py</code></td>
-</tr>
-<tr>
-<td><code>content_analysis/</code></td>
-<td>URL extraction, typosquatting, keyword matching, reputation</td>
-<td><code>pipeline.py</code>, <code>urls.py</code>, <code>keywords.py</code>, <code>reputation.py</code></td>
-</tr>
-<tr>
-<td><code>attachment_analysis/</code></td>
-<td>MIME extraction, file scanning, VirusTotal, ClamAV</td>
-<td><code>pipeline.py</code>, <code>extract.py</code>, <code>reputation.py</code></td>
-</tr>
-<tr>
-<td><code>decision_engine/</code></td>
-<td>Score aggregation, routing decision, policy layers</td>
-<td><code>scorer.py</code>, <code>allow_block.py</code>, <code>vip_policy.py</code></td>
-</tr>
-<tr>
-<td><code>delivery/</code></td>
-<td>SMTP relay, message modification, quarantine, notifications</td>
-<td><code>pipeline.py</code>, <code>relay.py</code>, <code>modify.py</code>, <code>quarantine.py</code></td>
-</tr>
-<tr>
-<td><code>audit/</code></td>
-<td>Append-only JSONL audit trail</td>
-<td><code>logger.py</code></td>
-</tr>
-<tr>
-<td><code>storage/</code></td>
-<td>KV abstraction (in-memory or Redis)</td>
-<td><code>__init__.py</code></td>
-</tr>
-<tr>
-<td><code>resilience/</code></td>
-<td>Retry with backoff, circuit breaker</td>
-<td><code>retry.py</code>, <code>circuit_breaker.py</code></td>
-</tr>
-<tr>
-<td><code>config/</code></td>
-<td>Centralized settings via pydantic-settings</td>
-<td><code>__init__.py</code></td>
-</tr>
-<tr>
-<td><code>multi_tenancy/</code></td>
-<td>Tenant isolation, MSP view, per-tenant rate limiting</td>
-<td><code>isolation.py</code>, <code>tenant_manager.py</code></td>
-</tr>
-<tr>
-<td><code>observability/</code></td>
-<td>Prometheus metrics, OpenTelemetry tracing, SLOs</td>
-<td><code>metrics.py</code>, <code>tracing.py</code>, <code>slo.py</code></td>
-</tr>
-<tr>
-<td><code>compliance/</code></td>
-<td>GDPR, SOC 2, data residency, retention</td>
-<td><code>gdpr.py</code>, <code>retention.py</code>, <code>residency.py</code></td>
-</tr>
-<tr>
-<td><code>threat_intel/</code></td>
-<td>IOC feeds, STIX/TAXII, MISP, NRD watchlists</td>
-<td><code>ioc_feed.py</code>, <code>stix_taxii.py</code>, <code>misp.py</code></td>
-</tr>
-<tr>
-<td><code>identity/</code></td>
-<td>JWT / bearer RBAC for admin APIs</td>
-<td><code>manager.py</code></td>
-</tr>
-<tr>
-<td><code>admin_ui/</code></td>
-<td>HTML dashboard, quarantine review, analytics</td>
-<td><code>ui_app.py</code>, <code>dashboard_analytics.py</code></td>
-</tr>
-<tr>
-<td><code>time_of_click/</code></td>
-<td>URL rewriting with HMAC-signed redirect</td>
-<td><code>service.py</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="trust-zones">Trust Zones</h2>
-<pre><code>Zone 1: Public Internet (UNTRUSTED)
-  - Sender MTAs, webhooks, phishing URLs, attacker-controlled content
+<h2 id="c4-model-architecture">C4 Model Architecture</h2>
+<h3 id="level-1-system-context-diagram">Level 1: System Context Diagram</h3>
+<p>The System Context diagram illustrates how <code>email-auth-gateway</code> fits into the broader enterprise email and security ecosystem, identifying external actors, mail delivery systems, and downstream security tools.</p>
+<pre class="mermaid">graph TB
+    subgraph Senders [&quot;External Entities&quot;]
+        SenderMTA[&quot;Inbound Mail Providers&lt;br/&gt;(SendGrid, Mailgun, SES, M365, GWorkspace)&quot;]
+        ThreatActors[&quot;Malicious Senders&lt;br/&gt;(Spoofing, Phishing, Malware)&quot;]
+    end
 
-Zone 2: Gateway Ingress Boundary (SEMI-TRUSTED, verified at entry)
-  - /webhooks/* (shared secret + IP allowlist + rate limit)
+    subgraph CoreGateway [&quot;Email Security Perimeter&quot;]
+        Gateway[&quot;email-auth-gateway&lt;br/&gt;(Ingress Webhook, Parser, Decision Engine)&quot;]
+    end
 
-Zone 3: Internal Microservice Network (TRUSTED)
-  - Redis, worker queues, admin APIs (/admin/*)
-  - mTLS enforced between internal nodes (production)
+    subgraph InternalSystems [&quot;Internal Enterprise Infrastructure&quot;]
+        MTA[&quot;Downstream SMTP Relay / Mail Server&lt;br/&gt;(Postfix, Exchange, Zimbra)&quot;]
+        Recipients[&quot;Enterprise Mailboxes&lt;br/&gt;(Employees / Inboxes)&quot;]
+        SOC[&quot;Security Operations Center (SOC)&lt;br/&gt;(Incident Responders / Admins)&quot;]
+        SIEM[&quot;Enterprise SIEM / SOAR&lt;br/&gt;(Splunk, Elastic, Sentinel)&quot;]
+    end
 
-Zone 4: Admin Zone (AUTHENTICATED + AUDITED)
-  - /admin/* behind separate ADMIN_SHARED_SECRET bearer token
-  - All actions recorded in admin audit log with operator identity
+    subgraph ExternalFeeds [&quot;External Threat Intelligence&quot;]
+        VT[&quot;VirusTotal API&lt;br/&gt;(File &amp; URL Reputation)&quot;]
+        GSB[&quot;Google Safe Browsing API&lt;br/&gt;(Phishing / Malware DB)&quot;]
+        RDAP[&quot;RDAP / WHOIS Registries&lt;br/&gt;(Domain Age Verification)&quot;]
+    end
+
+    SenderMTA --&gt;|HTTPS Webhook / SMTP| Gateway
+    ThreatActors -.-&gt;|Exploit / Phishing Email| SenderMTA
+    Gateway --&gt;|Clean Email (Relay)| MTA
+    MTA --&gt;|Deliver| Recipients
+    Gateway --&gt;|Security Alerts &amp; Digests| SOC
+    SOC --&gt;|Review Quarantine &amp; Release via Admin API| Gateway
+    Gateway --&gt;|JSONL Audit &amp; Metrics| SIEM
+    Gateway --&gt;|Reputation Lookups| VT
+    Gateway --&gt;|URL Scanning| GSB
+    Gateway --&gt;|Domain Age Check| RDAP
+</pre>
+<hr />
+<h3 id="level-2-container-diagram">Level 2: Container Diagram</h3>
+<p>The Container diagram decomposes <code>email-auth-gateway</code> into its independently deployable high-level execution components, microservices, and storage layers.</p>
+<pre class="mermaid">graph TB
+    subgraph IngressBoundary [&quot;Ingress Network Boundary&quot;]
+        LB[&quot;Cloud Load Balancer / Ingress&lt;br/&gt;(TLS Termination, WAF)&quot;]
+    end
+
+    subgraph GatewayCluster [&quot;Kubernetes Pod Cluster: email-auth-gateway&quot;]
+        FastAPIApp[&quot;FastAPI Application&lt;br/&gt;(Port 8000 / ASGI Uvicorn)&lt;br/&gt;- Inbound Webhook Endpoints&lt;br/&gt;- Admin API &amp; Identity RBAC&lt;br/&gt;- SOC Dashboard UI&quot;]
+        PipelineWorker[&quot;Parallel Analysis Pipeline&lt;br/&gt;- Stage 1: Auth Checker (SPF, DKIM, DMARC, ARC)&lt;br/&gt;- Stage 2: Content Analysis (NLP, Typosquat, URLs)&lt;br/&gt;- Stage 3: Attachment Analysis (Hashes, ClamAV)&quot;]
+        DecisionEngine[&quot;Decision Engine &amp; Policy Router&lt;br/&gt;- Score Accumulator&lt;br/&gt;- VIP Protection Engine&lt;br/&gt;- Multi-Tenant Rule Evaluator&quot;]
+        DeliveryRouter[&quot;Delivery &amp; Notification Engine&lt;br/&gt;- Outbound SMTP Relay Client&lt;br/&gt;- DLP Content Stripper&lt;br/&gt;- Quarantine Storage Writer&lt;br/&gt;- Webhook / Slack Notifier&quot;]
+    end
+
+    subgraph DataAndBacking [&quot;Storage &amp; Infrastructure Layer&quot;]
+        RedisKV[(&quot;Redis Cluster / Memory Store&lt;br/&gt;- Idempotency Deduplication&lt;br/&gt;- Distributed Token-Bucket Rate Limiter&lt;br/&gt;- Reputation &amp; RDAP Caches&quot;)]
+        DiskStorage[(&quot;Encrypted Quarantine &amp; Raw Storage&lt;br/&gt;- Fernet AES-128-CBC / HMAC-SHA256&lt;br/&gt;- Tenant-Isolated Directories&quot;)]
+        ClamAVDaemon[&quot;ClamAV Antivirus Daemon&lt;br/&gt;(clamd TCP:3310)&lt;br/&gt;- Local Stream Attachment Scanning&quot;]
+        AuditFile[(&quot;Append-Only JSONL Audit Store&lt;br/&gt;- Message Lifecycle Records&lt;br/&gt;- Admin Action Trail&quot;)]
+    end
+
+    LB --&gt;|Route Inbound Traffic| FastAPIApp
+    FastAPIApp --&gt; PipelineWorker
+    PipelineWorker --&gt; DecisionEngine
+    DecisionEngine --&gt; DeliveryRouter
+    FastAPIApp &lt;--&gt;|Rate Limit &amp; Dedup| RedisKV
+    PipelineWorker &lt;--&gt;|Cache Checks| RedisKV
+    PipelineWorker --&gt;|Scan Stream (TCP)| ClamAVDaemon
+    DeliveryRouter --&gt;|Store Encrypted .eml| DiskStorage
+    DeliveryRouter --&gt;|Append Event| AuditFile
+    FastAPIApp --&gt;|Query &amp; Audit Log| AuditFile
+</pre>
+<hr />
+<h3 id="level-3-component-diagram">Level 3: Component Diagram</h3>
+<p>The Component diagram details the internal modules, pipelines, and class boundaries within <code>email-auth-gateway</code>.</p>
+<pre class="mermaid">graph LR
+    subgraph Ingestion [&quot;Ingestion &amp; Security Layer&quot;]
+        Parsers[&quot;webhook_receiver.parsers&lt;br/&gt;(SendGrid, Mailgun, SES, M365)&quot;]
+        SecLayer[&quot;security/&lt;br/&gt;- verify_secret&lt;br/&gt;- RateLimiter&lt;br/&gt;- SourceIPAllowlist&quot;]
+    end
+
+    subgraph AnalysisStages [&quot;Three Parallel Analysis Stages&quot;]
+        AuthCheck[&quot;auth_checker/&lt;br/&gt;- check_spf&lt;br/&gt;- check_dkim&lt;br/&gt;- check_dmarc&lt;br/&gt;- check_arc&lt;br/&gt;- check_fcrdns&quot;]
+        ContentCheck[&quot;content_analysis/&lt;br/&gt;- extract_urls&lt;br/&gt;- check_typosquat&lt;br/&gt;- check_urgency_keywords&lt;br/&gt;- ReputationProvider&quot;]
+        AttachCheck[&quot;attachment_analysis/&lt;br/&gt;- extract_attachments&lt;br/&gt;- ClamAVScanner&lt;br/&gt;- VirusTotalFileProvider&quot;]
+    end
+
+    subgraph DecisionAndDelivery [&quot;Decision &amp; Action Layer&quot;]
+        Decision[&quot;decision_engine/&lt;br/&gt;- decide()&lt;br/&gt;- VIPPolicyEngine&lt;br/&gt;- TenantConfigStore&quot;]
+        Delivery[&quot;delivery/&lt;br/&gt;- SMTPRelay&lt;br/&gt;- QuarantineStore&lt;br/&gt;- WebhookNotifier&lt;br/&gt;- DLPScanner&quot;]
+    end
+
+    Parsers --&gt; SecLayer
+    SecLayer --&gt; AuthCheck
+    SecLayer --&gt; ContentCheck
+    SecLayer --&gt; AttachCheck
+    AuthCheck --&gt;|StageScore| Decision
+    ContentCheck --&gt;|StageScore| Decision
+    AttachCheck --&gt;|StageScore| Decision
+    Decision --&gt; Delivery
+</pre>
+<hr />
+<h3 id="level-4-execution-sequence-message-lifecycle">Level 4: Execution Sequence (Message Lifecycle)</h3>
+<p>The sequence diagram below traces the end-to-end processing of an inbound message from HTTP POST to delivery or quarantine.</p>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    actor Provider as Mail Provider (SendGrid/Mailgun)
+    participant Receiver as Webhook Receiver (FastAPI)
+    participant Sec as Security Hardening
+    participant Pipe as 3-Stage Pipeline
+    participant Dec as Decision Engine
+    participant Rel as Delivery / Relay
+    participant Quar as Quarantine Store
+    participant Aud as Audit Logger
+
+    Provider-&gt;&gt;Receiver: POST /webhooks/sendgrid/inbound/{secret}
+    Receiver-&gt;&gt;Sec: Validate Shared Secret &amp; Source IP
+    alt Authentication Failed
+        Sec--&gt;&gt;Provider: 404 Not Found (Constant-Time Rejection)
+    end
+    Receiver-&gt;&gt;Sec: Check Rate Limit &amp; Idempotency Hash (Redis)
+    alt Duplicate Message
+        Sec--&gt;&gt;Provider: 200 OK {&quot;duplicate&quot;: true}
+    end
+    Receiver-&gt;&gt;Pipe: Execute Parallel Analysis (Auth + Content + Attachments)
+    par Stage 1: Auth Checks
+        Pipe-&gt;&gt;Pipe: Evaluate SPF, DKIM, DMARC, ARC, FCrDNS
+    and Stage 2: Content Analysis
+        Pipe-&gt;&gt;Pipe: Extract URLs, evaluate domain age &amp; reputation
+    and Stage 3: Attachment Analysis
+        Pipe-&gt;&gt;Pipe: Hash attachments, scan via ClamAV / VT
+    end
+    Pipe--&gt;&gt;Dec: Aggregate Stage Scores &amp; Flag Reasons
+    Dec-&gt;&gt;Dec: Calculate Composite Risk Score &amp; Policy Thresholds
+    alt Score &gt;= 70 (QUARANTINE)
+        Dec-&gt;&gt;Quar: Encrypt .eml with Fernet key &amp; persist
+        Quar-&gt;&gt;Quar: Dispatch Webhook Alert to Slack
+        Dec-&gt;&gt;Aud: Log Quarantine Record
+    else Score between 30 and 69 (WARN_AND_STRIP)
+        Dec-&gt;&gt;Rel: Defang URLs, tag subject [EXTERNAL], strip attachments
+        Rel-&gt;&gt;Rel: SMTP Relay to downstream server
+        Dec-&gt;&gt;Aud: Log Warning &amp; Relay Record
+    else Score &lt; 30 (FORWARD)
+        Dec-&gt;&gt;Rel: SMTP Relay message unmodified
+        Dec-&gt;&gt;Aud: Log Clean Delivery Record
+    end
+    Receiver--&gt;&gt;Provider: 200 OK {&quot;message_id&quot;: &quot;...&quot;, &quot;action&quot;: &quot;...&quot;}
+</pre>
+<hr />
+<h2 id="security-boundaries-trust-zones">Security Boundaries &amp; Trust Zones</h2>
+<p>The gateway establishes four distinct trust boundaries:</p>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Level</th>
+<th>Components</th>
+<th>Access Control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Zone 1: Public Internet</strong></td>
+<td>Untrusted</td>
+<td>Inbound sender MTAs, webhooks, external attachments</td>
+<td>Strict rate limiting, payload size caps, constant-time validation</td>
+</tr>
+<tr>
+<td><strong>Zone 2: Ingress Boundary</strong></td>
+<td>Semi-Trusted</td>
+<td><code>/webhooks/*</code>, <code>/healthz</code>, <code>/readyz</code></td>
+<td>Shared secrets, IP allowlists, HMAC signature verification</td>
+</tr>
+<tr>
+<td><strong>Zone 3: Internal Mesh</strong></td>
+<td>Trusted</td>
+<td>Redis KV, ClamAV daemon, worker pipelines</td>
+<td>mTLS encryption, network policies, private VPC isolation</td>
+</tr>
+<tr>
+<td><strong>Zone 4: Admin &amp; Audit</strong></td>
+<td>Highly Privileged</td>
+<td><code>/admin/*</code>, SOC dashboard, raw file decryptor</td>
+<td>Bearer token / JWT auth, RBAC roles (<code>admin</code>, <code>analyst</code>), JSONL audit trail</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="scoring-architecture-decision-matrix">Scoring Architecture &amp; Decision Matrix</h2>
+<p>Scores accumulate from individual stage checks into a composite risk total:</p>
+<pre><code>Risk Score = Score(Auth Checker) + Score(Content Analysis) + Score(Attachment Analysis) + VIP Penalty
 </code></pre>
-<hr />
-<h2 id="scoring-model">Scoring Model</h2>
-<p>Every analysis stage returns a <code>score_delta</code> that accumulates into a total risk score:</p>
-<table>
-<thead>
-<tr>
-<th>Score Range</th>
-<th>Action</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0 – 29</td>
-<td><code>FORWARD</code></td>
-<td>Relay as-is to destination</td>
-</tr>
-<tr>
-<td>30 – 69</td>
-<td><code>WARN_AND_STRIP</code></td>
-<td>Prefix subject, defang URLs, strip attachments, then relay</td>
-</tr>
-<tr>
-<td>70 – 100+</td>
-<td><code>QUARANTINE</code></td>
-<td>Encrypt, store, notify admin; do not deliver</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p><strong>Single-signal override</strong>: A VirusTotal/ClamAV malware hit contributes <code>+100</code> — alone enough to quarantine. Allowlist policy bypasses scoring unless a malware signal is present.</p>
-</blockquote>
-<h3 id="score-contributions-by-check">Score contributions by check</h3>
-<table>
-<thead>
-<tr>
-<th>Check</th>
-<th>Pass</th>
-<th>Fail</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>SPF</td>
-<td>0</td>
-<td>+30 (hard fail), +15 (softfail)</td>
-<td>ARC mitigates if valid chain present</td>
-</tr>
-<tr>
-<td>DKIM</td>
-<td>0</td>
-<td>+30 (invalid), +15 (none)</td>
-<td></td>
-</tr>
-<tr>
-<td>DMARC</td>
-<td>0</td>
-<td>+50 (p=reject), +35 (p=quarantine), +10 (p=none)</td>
-<td></td>
-</tr>
-<tr>
-<td>FCrDNS</td>
-<td>0</td>
-<td>+15</td>
-<td></td>
-</tr>
-<tr>
-<td>MTA-STS enforce fail</td>
-<td>0</td>
-<td>+20</td>
-<td></td>
-</tr>
-<tr>
-<td>BEC / urgency keywords</td>
-<td>0</td>
-<td>+5–+30</td>
-<td>Configurable, per-tenant</td>
-</tr>
-<tr>
-<td>Typosquat / homoglyph</td>
-<td>0</td>
-<td>+20–+40</td>
-<td></td>
-</tr>
-<tr>
-<td>Malicious URL (VirusTotal/GSB)</td>
-<td>0</td>
-<td>+100</td>
-<td></td>
-</tr>
-<tr>
-<td>Malware attachment (ClamAV/VT)</td>
-<td>0</td>
-<td>+100</td>
-<td></td>
-</tr>
-<tr>
-<td>VIP display name spoof</td>
-<td>0</td>
-<td>+25–+40</td>
-<td>Configurable VIP list</td>
-</tr>
-<tr>
-<td>IP reputation (Spamhaus/SORBS)</td>
-<td>0</td>
-<td>+15–+30</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="deployment-topology">Deployment Topology</h2>
-<pre><code>                       Internet
-                          │
-                    [CloudFront/WAF]
-                          │
-                    [Kubernetes Ingress]
-                          │
-              ┌───────────┴───────────┐
-              │     email-auth-gateway│  &lt;- HPA 5-25 replicas
-              │       (FastAPI)       │
-              └───┬───────┬───────────┘
-                  │       │
-          ┌───────┘       └────────┐
-          ▼                        ▼
-   [Redis ElastiCache]    [ClamAV Daemon]
-   Multi-AZ, TLS          Dedicated cluster
-          │
-          └──── Backing: rate limiting, dedup, caching
-</code></pre>
-<hr />
-<h2 id="resilience-design">Resilience Design</h2>
-<table>
-<thead>
-<tr>
-<th>Concern</th>
-<th>Mechanism</th>
-<th>Behavior on Failure</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Redis unavailable</td>
-<td><code>InMemoryStore</code> fallback</td>
-<td>Degraded: rate limiting is per-pod</td>
-</tr>
-<tr>
-<td>ClamAV unreachable</td>
-<td>Circuit breaker + fail-open</td>
-<td>Attachment scanned only via VT/heuristics</td>
-</tr>
-<tr>
-<td>VirusTotal timeout</td>
-<td>Retry with backoff + circuit breaker</td>
-<td>Returns <code>unknown</code> verdict; heuristics still apply</td>
-</tr>
-<tr>
-<td>SMTP relay failure</td>
-<td>Retry on connection errors; never retries 5xx</td>
-<td>Escalates to quarantine if <code>warn_and_strip</code> fails</td>
-</tr>
-<tr>
-<td>Duplicate webhook delivery</td>
-<td>SHA-256 idempotency key in Redis</td>
-<td>Silently skipped, response <code>{"duplicate": true}</code></td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong><code>0 – 29</code> Points (<code>FORWARD</code>)</strong>: Normal clean delivery.</li>
+<li><strong><code>30 – 69</code> Points (<code>WARN_AND_STRIP</code>)</strong>: Subject prefix <code>[SUSPICIOUS]</code>, defanged URLs (<code>hxxps://...</code>), attachments quarantined, relayed to user.</li>
+<li><strong><code>70 – 100+</code> Points (<code>QUARANTINE</code>)</strong>: Immediate halt of delivery; message encrypted at rest, admin alert dispatched, reviewable via SOC portal.</li>
+<li><strong>Malware Override</strong>: Any verified malware hit from ClamAV or VirusTotal assigns <code>+100</code> points immediately, triggering unconditional quarantine regardless of allowlist rules.</li>
+</ul>
 
     <div class="doc-footer">
       <span>email-auth-gateway enterprise documentation suite</span>

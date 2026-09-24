@@ -390,6 +390,7 @@
 <a href="../architecture.html" class="nav-item">Architecture Overview</a>
 <a href="../configuration.html" class="nav-item">Configuration Guide</a>
 <a href="../api_reference.html" class="nav-item">API Reference</a>
+<a href="../tenant_onboarding.html" class="nav-item">Tenant Onboarding</a>
 <a href="../environment_parity.html" class="nav-item">Environment Parity</a>
 <div class="nav-group-title">Gateway Modules (1/2)</div>
 <a href="../modules/auth_checker.html" class="nav-item">Authentication Checker</a>
@@ -421,6 +422,7 @@
 <div class="nav-group-title">Security & Governance</div>
 <a href="../security/threat_model.html" class="nav-item">Threat Model & STRIDE</a>
 <a href="../security/hardening.html" class="nav-item">Production Hardening</a>
+<a href="../detection_changelog.html" class="nav-item">Detection Logic Changelog</a>
 <div class="nav-group-title">Operations & Runbooks</div>
 <a href="../runbooks/INDEX.html" class="nav-item">Runbook Directory</a>
 <a href="../runbooks/clamav_unreachable.html" class="nav-item">ClamAV Unreachable</a>
@@ -549,7 +551,70 @@ print(verdict.reasons)
 &quot;click here to verify&quot;, &quot;your account will be terminated&quot;
 </code></pre>
 <p>Score delta: <code>+5</code> per low-confidence phrase up to <code>+30</code> for explicit BEC patterns.</p>
-<p>Multi-language keyword support is available for all EU languages, Simplified Chinese, Japanese, Arabic, and Russian via <code>multilang_keywords.py</code>.</p>
+<h3 id="multi-language-content-analysis-multilang_keywordspy">Multi-Language Content Analysis (<code>multilang_keywords.py</code>)</h3>
+<p>The scanner automatically identifies the message language using Unicode script detection (Hiragana/Katakana for Japanese, Cyrillic for Russian, CJK ideographs for Chinese) and stopword frequency scoring for Latin-script languages.</p>
+<table>
+<thead>
+<tr>
+<th>Language</th>
+<th>Code</th>
+<th>Scanned Attack Vectors</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>English</strong></td>
+<td><code>en</code></td>
+<td>Wire transfer, payroll redirection, credential expiration, invoice fraud</td>
+</tr>
+<tr>
+<td><strong>German</strong></td>
+<td><code>de</code></td>
+<td><code>dringende zahlung</code>, <code>rechnung überfällig</code>, <code>überweisung ausstehend</code>, <code>bankverbindung geändert</code></td>
+</tr>
+<tr>
+<td><strong>French</strong></td>
+<td><code>fr</code></td>
+<td><code>paiement urgent</code>, <code>facture impayée</code>, <code>virement en attente</code>, <code>changement de coordonnées bancaires</code></td>
+</tr>
+<tr>
+<td><strong>Spanish</strong></td>
+<td><code>es</code></td>
+<td><code>pago urgente</code>, <code>factura vencida</code>, <code>transferencia pendiente</code>, <code>cambio de cuenta bancaria</code></td>
+</tr>
+<tr>
+<td><strong>Italian</strong></td>
+<td><code>it</code></td>
+<td><code>pagamento urgente</code>, <code>fattura scaduta</code>, <code>bonifico in sospeso</code>, <code>modifica coordinate bancarie</code></td>
+</tr>
+<tr>
+<td><strong>Portuguese</strong></td>
+<td><code>pt</code></td>
+<td><code>pagamento urgente</code>, <code>fatura vencida</code>, <code>transferência pendente</code>, <code>alteração de dados bancários</code></td>
+</tr>
+<tr>
+<td><strong>Dutch</strong></td>
+<td><code>nl</code></td>
+<td><code>dringende betaling</code>, <code>factuur achterstallig</code>, <code>openstaande rekening</code>, <code>wijziging bankgegevens</code></td>
+</tr>
+<tr>
+<td><strong>Japanese</strong></td>
+<td><code>ja</code></td>
+<td><code>至急の支払い</code>, <code>請求書の未払い</code>, <code>振込のお願い</code>, <code>アカウントの停止</code>, <code>振込先変更</code></td>
+</tr>
+<tr>
+<td><strong>Russian</strong></td>
+<td><code>ru</code></td>
+<td><code>срочная оплата</code>, <code>просроченный счет</code>, <code>изменение банковских реквизитов</code>, <code>учетная запись заблокирована</code></td>
+</tr>
+<tr>
+<td><strong>Chinese</strong></td>
+<td><code>zh</code></td>
+<td><code>紧急付款</code>, <code>逾期账单</code>, <code>银行账户变更</code>, <code>账号已被冻结</code>, <code>请协助保密</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unicode &amp; Diacritic Resilience</strong>: All incoming text undergoes Unicode NFKC normalization and diacritic stripping (<code>unicodedata.normalize('NFKD')</code>), ensuring keywords match even when accents or umlauts are stripped by attackers to evade filters (e.g. <code>überweisung</code> matches <code>uberweisung</code>, <code>impayée</code> matches <code>impayee</code>).</p>
 <h3 id="url-extraction-typosquat-detection">URL Extraction + Typosquat Detection</h3>
 <ol>
 <li>Extracts all URLs from both plain-text and HTML bodies (with HTML entities decoded).</li>
